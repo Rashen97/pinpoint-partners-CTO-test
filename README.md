@@ -51,10 +51,10 @@ The current implementation supports seven enabled firms:
 - Quinn Emanuel is included under its native M&A Litigation practice,
   rather than being presented as a transactional M&A practice.
 
-The latest observed local directory contained 827 enriched profiles.
+The latest observed local directory contained 1031 enriched profiles.
 Roster coverage and profile enrichment counts are measured separately.
 
-All 34 regression tests passed on 19 November 2026, including tests for
+All 35 regression tests passed on 19 November 2026, including tests for
 source failures, partial publication, identity normalisation, pagination,
 profile enrichment, removal tracking and unexpected partial coverage.
 
@@ -63,6 +63,56 @@ claimed complete coverage where source access, practice mapping or
 pagination could not be reliably verified.
 
 ## Production roadmap
+
+## Final integration testing
+
+On 19 November 2026, I executed the full refresh pipeline and
+verified the resulting SQLite database, FastAPI backend and
+recruiter interface.
+
+| Metric | Result |
+| --- | --- |
+| Firms with verified coverage | 6 of 15 |
+| Firms with partial coverage | 1 |
+| Active roster entries | 1,043 |
+| Successfully enriched profiles | 1,031 |
+| Profile enrichment coverage | 98.85% |
+| Recorded profile enrichment failures | 12 |
+| Automated regression tests | 35 passed |
+
+The full refresh returned exit code 3 due to individual profile
+enrichment failures. Previously collected roster data remained
+available.
+
+Investigation identified six character encoding issues, three
+directory-to-profile name variations and three biographies that
+could not be extracted.
+
+I corrected the shared HTML decoding implementation to pass raw
+response bytes to BeautifulSoup, rather than relying on HTTP
+response text decoding.
+
+The correction was validated against a live Milbank profile and
+with a new automated regression test. The stored dataset has
+not been refreshed again following this correction, so the
+reported profile count remains 1,031.
+
+Strict identity validation remains in place to prevent incorrect
+profile associations.
+
+Manual frontend testing confirmed:
+
+- Partner search and filtering by firm, office and practice.
+- Sorting and pagination.
+- Individual partner profile display.
+- Saved partners and browser persistence.
+- Google research links.
+- Recent changes and labelled fictional preview data.
+- Verified and partial coverage indicators.
+
+Profile enrichment coverage refers to the collected roster,
+not complete coverage of all 15 target firms.
+
 
 ### Weekly automated refresh
 

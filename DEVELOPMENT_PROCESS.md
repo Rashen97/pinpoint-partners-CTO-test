@@ -63,3 +63,31 @@ A larger registry alone still leaves someone learning every site. I would test b
 Shared HTML and JSON extractors can absorb common request, response, and pagination patterns. A discovery assistant could also propose draft settings or draft a small extractor for a source it can inspect. A reviewer would check scope and coverage before enabling the source. I would test this on one known firm and one new firm and measure how much manual investigation it replaces. Approved configurations can then run weekly and go back to review on unexpected changes. A licensed dataset is another option if the business needs broad coverage sooner than it can verify sources itself.
 
 For responsible collection at that scale, I would review site access terms and crawler rules before onboarding, make requests identifiable and bounded per domain, and stop when access is blocked. I would retain the professional fields the recruiter needs, attach evidence and observation times, and set retention and correction rules before sharing the system more widely. These are production measures to implement alongside scheduling and source monitoring.
+
+
+## 7. Distinguish expected coverage limitations from operational failures
+
+During the reliability review, I identified that permission to publish
+partial coverage should be separate from whether partial coverage is
+expected.
+
+I introduced the expected_partial_scope configuration property alongside
+publish_partial_scope.
+
+For Gibson Dunn, limited Corporate coverage is intentional. For a firm
+with an established verified scope, an unexpected reduction in practice
+coverage should generate an operational failure signal.
+
+The refresh can therefore preserve previously verified data, publish
+eligible observations and return a nonzero exit code when investigation
+is required.
+
+I added a regression test using a simulated partial connector response
+and a temporary SQLite database. The test verifies that the previous
+roster remains available, new observations are published and the
+unexpected partial status is reported.
+
+Following this change, all 35 regression tests passed.
+
+Historical roster count monitoring remains a production improvement,
+rather than a capability claimed by the current prototype.

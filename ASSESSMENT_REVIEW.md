@@ -51,7 +51,7 @@ while preserving existing data and publishing eligible observations.
 This allows a future scheduler to detect operational problems without
 discarding useful information.
 
-All 34 regression tests passed, including a dedicated test for unexpected
+All 35 regression tests passed, including a dedicated test for unexpected
 partial coverage and preservation of previously verified partners.
 
 A remaining production limitation is that a source could return an
@@ -81,6 +81,31 @@ The Git timeline covers approximately **5 hours and 6 minutes**, from the initia
 | 19 November | 01:52 | SQLite-backed API and frontend integration | `08789df` |
 | 19 November | 02:26 | Expanded firm coverage and Recent changes preview | `d8c7567` |
 | 19 November | 02:50 | README, development log, and assessment review | `817ea8a` |
+
+
+## Time log
+
+Total estimated active working time: approximately 7 hours.
+
+I worked on the assessment across two sessions, beginning on the evening
+of 18 November and continuing on the morning of 19 November 2026.
+
+The initial Git timeline spans approximately 5 hours and 6 minutes.
+This included planning, implementation, documentation and a short
+break following the initial repository commit.
+
+I resumed work the following morning to improve firm coverage,
+introduce partial-scope publication, review refresh failure handling,
+and complete additional regression testing.
+
+The total is an honest estimate of active working time, excluding
+breaks and overnight downtime.
+
+I exceeded the suggested six-hour time budget by approximately one
+hour, focusing the additional time on data integrity, reliable refresh
+behaviour and verification rather than introducing further product
+features.
+
 
 ## How I used AI
 

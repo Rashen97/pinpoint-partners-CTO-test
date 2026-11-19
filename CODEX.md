@@ -71,7 +71,7 @@ When verifying a new source, distinguish directory discovery, a successful test 
 - Failed or incomplete extractions are rejected.
 - Partial publication does not infer removals or overwrite previously
   verified roster entries.
-- The latest regression suite contains 34 passing tests.
+- The latest regression suite contains 35 passing tests.
 
 Historical count anomaly detection, visible per-firm freshness and
 scheduled production execution remain planned improvements.
