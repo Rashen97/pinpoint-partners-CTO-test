@@ -6,8 +6,11 @@ From the repository root, serve the frontend with Python:
 python -m http.server 8080 --bind 127.0.0.1 --directory frontend
 ```
 
-Open [the local directory](http://127.0.0.1:8080/). The preview uses clearly
-labelled sample records. Saved partners are stored in the current browser.
+Open [the local directory](http://127.0.0.1:8080/). It connects to the local
+FastAPI backend on port 8001 by default. Start the backend as described in the
+[project README](../README.md). For a standalone sample preview, set the
+`api-base` meta tag in `index.html` to an empty string. Saved partners are
+stored in the current browser.
 Recent changes uses sample events in preview. The research form starts blank
 on sample profiles. On a connected roster, open a
 partner profile to edit a name-and-firm query or add a topic, then open Google
@@ -22,7 +25,7 @@ If using a separate server, allow the frontend origin through CORS.
 
 ### `GET /api/partners`
 
-Return JSON with a `records` array containing the current directory roster.
+Return JSON with a `records` array containing active partners with saved profile enrichment.
 The frontend applies search, firm/office/practice filters, name sorting, and
 pagination to this collection.
 

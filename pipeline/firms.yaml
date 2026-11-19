@@ -36,6 +36,7 @@ wachtell_lipton:
   notes: "Corporate is the documented scope rule because no general M&A option is published. Direct automated requests currently return 403."
 
 quinn_emanuel:
+  refresh_enabled: false
   name: "Quinn Emanuel Urquhart & Sullivan"
   directory_url: "https://www.quinnemanuel.com/attorneys"
   results_url: "https://www.quinnemanuel.com/Umbraco/surface/AttorneysListSurface/GetAttorneyListByFilter"
@@ -45,6 +46,7 @@ quinn_emanuel:
   notes: "Captured example only. Verify country scope, role and practice IDs, and any POST body. Keep litigation practice labels distinct from transactional M&A."
 
 davis_polk:
+  refresh_enabled: false
   name: "Davis Polk & Wardwell"
   directory_url: "https://www.davispolk.com/lawyers"
   results_url: "https://dbc8kua830-dsn.algolia.net/1/indexes/*/queries"
@@ -55,7 +57,7 @@ davis_polk:
   notes: "Captured Partner-only search. Confirm practice filters and pagination in the JSON payload. Captured key and request ID intentionally omitted."
 
 simpson_thacher:
-  refresh_enabled: true
+  refresh_enabled: false
   name: "Simpson Thacher & Bartlett"
   directory_url: "https://www.stblaw.com/our-team"
   results_url: "https://www.stblaw.com/dataservices/DataServices.Content.Services.Json.AttorneyLookup/TeamMembers"
@@ -112,6 +114,7 @@ paul_weiss:
   page_param: pagingNumber
 
 gibson_dunn:
+  refresh_enabled: false
   name: "Gibson, Dunn & Crutcher"
   directory_url: "https://www.gibsondunn.com/people/"
   filtered_url: "https://www.gibsondunn.com/people/?_people_practices=mergers-and-acquisitions"
@@ -119,18 +122,21 @@ gibson_dunn:
   notes: "Filtered page shows lawyer cards. Test a plain HTTP fetch and check how later batches are loaded."
 
 latham_watkins:
+  refresh_enabled: false
   name: "Latham & Watkins"
   directory_url: "https://www.lw.com/en/people"
   results_url: null
   notes: "Capture the listing request after selecting the practice filter."
 
 cravath:
+  refresh_enabled: false
   name: "Cravath, Swaine & Moore"
   directory_url: "https://www.cravath.com/people/index.html"
   results_url: null
   notes: "The Partner section shows practice labels. Check View All for the complete list and exclude Retired Partner."
 
 milbank:
+  refresh_enabled: false
   name: "Milbank"
   directory_url: "https://www.milbank.com/en/professionals/index.html"
   results_url: null
@@ -154,6 +160,7 @@ sullivan_cromwell:
   notes: "M&A is verified. No broad native Corporate option is published; Corporate Governance is not treated as equivalent."
 
 paul_hastings:
+  refresh_enabled: false
   name: "Paul Hastings"
   directory_url: "https://www.paulhastings.com/professionals"
   filtered_url: "https://www.paulhastings.com/professionals?facets=ph_nested_practice_areas%3DMergers%2B%2526%2BAcquisitions"
@@ -161,6 +168,7 @@ paul_hastings:
   notes: "M&A facet is in the URL. Check the Partner filter and next-page request."
 
 skadden:
+  refresh_enabled: false
   name: "Skadden, Arps, Slate, Meagher & Flom"
   directory_url: "https://www.skadden.com/Professionals"
   filtered_url: "https://www.skadden.com/professionals?hasSearched=true&practice=8551cacf-412c-4b5f-bfb4-000000037583"
@@ -168,6 +176,7 @@ skadden:
   notes: "M&A practice ID is in the URL. Capture View More and verify which titles and practices are in scope."
 
 king_spalding:
+  refresh_enabled: false
   name: "King & Spalding"
   directory_url: "https://www.kslaw.com/people"
   filtered_url: "https://www.kslaw.com/search?filter_capability=Mergers+%26+Acquisitions+%28M%26A%29&section=people"
@@ -175,6 +184,7 @@ king_spalding:
   notes: "Official M&A View All link. A zero-result shell is not evidence of an empty roster."
 
 weil:
+  refresh_enabled: false
   name: "Weil, Gotshal & Manges"
   directory_url: "https://www.weil.com/people"
   results_url: null

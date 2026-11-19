@@ -64,7 +64,9 @@ function render() {
   byId("previous").disabled = state.page === 1;
   byId("next").disabled = state.page >= pageCount;
   byId("empty").hidden = Boolean(matches.length);
-  byId("empty").textContent = state.savedOnly && !savedCount
+  byId("empty").textContent = !state.records.length
+    ? "No enriched partner profiles are available yet."
+    : state.savedOnly && !savedCount
     ? "Save a partner from the directory to find them here."
     : "No partners match your search and filters.";
 }

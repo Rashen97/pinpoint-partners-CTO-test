@@ -1,7 +1,28 @@
 # Pinpoint partner directory
 
 See the [frontend guide](frontend/README.md) to preview the recruiter directory
-and connect a future backend.
+or connect it to the FastAPI backend.
+
+## Run the backend
+
+From the repository root:
+
+```powershell
+python -m pip install -r requirements.txt
+python -m uvicorn backend.app.main:app --host 127.0.0.1 --port 8001
+```
+
+Open the [API docs](http://127.0.0.1:8001/docs) to try the two directory routes.
+The backend reads `database/partners.db` in read-only mode. Both endpoints
+serve active partners with saved enrichment in `partner_profiles_all`.
+They join to `partner_entries_all` for roster identity and listing status.
+Run the full refresh below to populate profiles. An initialized database
+without enriched profiles returns an empty list. A missing or unreadable
+database returns HTTP 503. Coverage counts firms in the verified roster
+regardless of enrichment progress. Recent changes show retained removals.
+
+The frontend served on port 8080 connects to
+`http://127.0.0.1:8001/api` by default.
 
 The refresh pipeline is organized as `connectors -> processing -> storage`.
 Every connector returns the same `TargetPartner` model while retaining native

@@ -157,6 +157,42 @@ When the full refresh stopped, I checked SQLite and the live connector results s
 
 Simpson Thacher's legacy endpoint failed during the combined refresh. I kept the last verified combined roster and left the replacement source pending verification of both practice filters and pagination. I also tested the disabled connectors directly. Sullivan & Cromwell returned 94 M&A partners and still lacked verified broad Corporate coverage. Kirkland returned HTTP 500, and Wachtell returned HTTP 403. These checks showed why connector availability, verified scope and profile coverage each need their own status.
 
+### Build the directory around preparation for a recruiter call
+
+I built search and firm, office, and practice filters so a recruiter can start with a name or narrow a market segment. A profile drawer keeps the search and shortlist in context while the recruiter reads a biography or opens the firm's source page. I used browser storage for saved partners because a shortlist can be useful during a local demo without the cost of accounts, permissions, and shared persistence. Shared shortlists and side-by-side comparison are potential extensions.
+
+I added Recent changes because the brief describes a market that moves every week. The interface supports newly listed and no longer listed observations, with a firm, observation date, and source link when available. The connected backend currently supplies recorded removals. Supporting additions requires persisting first sightings, and linking a departure at one firm to an arrival at another would require separate identity evidence. I used labelled sample events to demonstrate the interface before connecting it to real data.
+
+### Start live research with an editable search
+
+I considered putting an AI research chat next to the directory. The immediate need was to look up a specific person ahead of a call, so I started with a Google search from the profile drawer. The name and firm give the query context, and shortcuts add terms for deals, press coverage, or announcements. The recruiter can edit the query and decides when to send it to Google. The sample preview starts with a blank query because its profiles are fictional.
+
+An AI research assistant would need a source retrieval mechanism, citations, and a way to handle ambiguous identities and missing evidence. I deferred that work until the directory and source data could support it. The search form also keeps live research separate from the facts we extract and save from firm sources.
+
+### Define the API from the recruiter interface
+
+I started the FastAPI backend with the two reads the UI needed. `GET /api/partners` provides the summaries used for browsing and filtering, plus coverage and changes when available. `GET /api/partners/{partner_entry_id}` provides enrichment on demand for the profile drawer. The frontend and backend could be developed against that contract before I connected SQLite. I kept the standalone sample mode available so the interface can still be reviewed when an external source changes.
+
+FastAPI gives the routes typed response models and OpenAPI documentation. I kept the application entry point, routes, response schemas, and SQLite queries in separate modules so the HTTP contract is easy to find and the queries can evolve independently. The backend opens the database read-only while the refresh pipeline owns migrations and writes. Each request gets its own connection, and the directory reads its records, coverage, and changes in one SQLite snapshot.
+
+### Make saved profiles the source of the connected directory
+
+The first SQLite integration listed entries from `partner_entries_all` and fetched enrichment only when a recruiter opened a profile. I revised that after tracing what the two tables were meant to represent. The entries table gives the enrichment stage the profile URLs to visit and records who is currently listed. The profiles table holds the enriched data the recruiter is here to use.
+
+Both API reads now start from `partner_profiles_all` and join to `partner_entries_all` for identity, source links, and current listing status. The directory uses profile role, offices, and practices where available, with roster values as a fallback for missing fields. An active entry appears after enrichment is saved. Verified firm coverage is measured from the roster, so it can exceed the firms represented by saved profiles during a partial enrichment run. That tradeoff is visible in an empty state that specifically says there are no enriched profiles yet.
+
+### Isolate the end-to-end test with one verified firm
+
+When the frontend showed zero partners, I checked the HTTP response and SQLite separately. The backend responded successfully, and Paul Weiss had 216 entries in its firm table. The combined entries and profiles tables were empty. The next refresh confirmed the immediate blocker: Simpson Thacher's directory endpoint returned HTTP 404. The current combined update requires every enabled firm to pass extraction and scope checks, so enrichment never started on that run.
+
+For the next end-to-end check I enabled only Paul Weiss so I could exercise the default refresh path with a single known source. That path covers extraction, the combined entries table, and profile enrichment. The API should then expose any saved profiles. A targeted `--firm` run stops before combined enrichment. Using `--profile-limit 10` is a way to check the full path with fewer profile requests. This test configuration is distinct from verified coverage of the 15 firms in the brief.
+
+### Decide what to change first for weekly operation at 50 firms
+
+The empty directory showed that a failing source can hold back healthy firms. My first production change would be to publish each complete, verified firm snapshot independently and carry forward the last good snapshot for a failed firm. I would show the last verified time and any stale or partial coverage in the UI. The existing completeness checks would still govern whether a firm refresh can change listing status.
+
+I would run the same refresh on a weekly schedule with overlap protection, per-firm run history, and alerts for source failures or unexpected coverage drops. Profile work would focus on new and stale entries, with bounded requests per site and retries for transient failures. That addresses source reliability and enrichment time first. SQLite and client-side filtering fit the current single-host prototype. I would measure query latency, roster payload size, and write contention before moving filtering to the server or adopting a shared database.
+
 ## Understanding the problem
 
 I started by reading the brief carefully so that I understood both what needed to be built and who it was being built for. Once I had understood the requirements, I uploaded the brief to ChatGPT and used it as a brainstorming partner to explore possible approaches.
@@ -165,7 +201,7 @@ My first consideration was how a recruiter would actually use the information. A
 
 This led me to the idea of making a structured directory the main interface. A directory gives recruiters an organised way to search, filter, browse, and compare the information that has already been collected. It makes the core data easy to access without requiring the recruiter to know exactly what question to ask.
 
-I still saw value in a chat system alongside the directory. My idea was for this to use an agentic model with tools and web-scraping or search connectors. If information had not already been captured in the directory, the assistant could look for it at runtime and return it to the recruiter. It could also support a natural back-and-forth conversation when the recruiter wanted to explore a person or topic in more detail. In this design, the directory provides the reliable and organised foundation, while the assistant adds flexibility for questions that the stored data cannot answer.
+I also explored whether an assistant could answer questions that the stored data could not. That idea led to the live research controls in the profile drawer. The prototype gives the recruiter an editable query and access to current search results from the context of a specific profile.
 
 ## Starting with the data
 
