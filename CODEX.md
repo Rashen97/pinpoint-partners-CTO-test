@@ -2,11 +2,11 @@
 
 ## Start here
 
-This is the handoff for Rashen’s Pinpoint Partners graduate CTO technical assessment. Treat the original assessment PDF as authoritative. The current prototype includes directory extraction, roster normalization and deduplication, and profile enrichment. The refresh pipeline saves each stage as JSON in `mock_database/`. Use `pipeline/firms.yaml` and the connector code to check current configuration. The source probes below record what was observed during discovery.
+This is the handoff for Rashen’s Pinpoint Partners graduate CTO technical assessment. Treat the original assessment PDF as authoritative. The work so far is source discovery and design. A draft `firms.yaml` was created early in the chat, but it predates the later findings for Paul, Weiss, Sullivan & Cromwell, Wachtell, and Simpson Thacher. Do not assume an implementation, database, or Python environment already exists. Inspect the user's project folder first.
 
 Suggested first instruction to Codex:
 
-> Read this handoff and the assessment PDF if present. Start with the existing Paul, Weiss connector and run a targeted refresh twice. Check that the mock database roster contains unique partner entries and that overlapping practice labels are retained. Use the source evidence below when expanding firm coverage. Report which firms and practices have verified coverage and which are pending.
+> Read this handoff and the assessment PDF if present. Start with one end-to-end Paul, Weiss M&A page: fetch it using the verified request, parse names and profile links, and save to SQLite. Run it twice and show that there are no duplicates. Keep the code easy to explain. Then expand paging and firm adapters based on the evidence below. Report what is verified versus pending. Do not report a partial scrape as full coverage.
 
 ## Assessment brief
 
@@ -21,7 +21,7 @@ Suggested first instruction to Codex:
 1. **Directory first.** Search by name and filter by firm, office, and practice. Open a profile to scan source-backed facts and bios. Show a source link and freshness date. A small weekly changes view is more valuable than a polished dashboard.
 2. **Manual refresh first.** `refresh.py` is the CLI entry point. Run `python -m pipeline.refresh` from the repository root for all refresh-enabled firms, or add `--firm paul_weiss` for a targeted run. No deployed scheduler needed for the prototype, but document how the same command can be run weekly.
 3. **Adapters, not 15 separate programs.** `firms.yaml` says where to look and stores confirmed settings. Adapter code decides how to make and parse the request. Share code when the source shapes really match. Every adapter returns the same partner fields, and a common refresh path validates, saves, and compares them. Point the parser at the response body, not at the browser's rendered page unless using browser automation intentionally.
-4. **Local JSON mock database.** The pipeline saves connector diagnostics, verified rosters, and profile enrichment under `mock_database/`. The combination of `firm_key` and canonical `profile_url` identifies a roster entry and determines its `partner_entry_id`. Merge labels across overlapping searches. Keep identity scoped to each firm's roster entry.
+4. **Local SQLite initially.** Python's built-in `sqlite3` creates `partners.db` on first run. Minimal fields are firm, name, role, office(s), raw practice label(s), profile URL, and last-seen/last-checked time. Unique key initially `(firm, profile_url)`. Merge labels across overlapping searches. Profiles can change URLs or firms, so do not claim cross-firm matches or departures based on name alone.
 5. **Separate roster ingestion from bio enrichment.** The roster source proves membership and gives profile links. Fetch bio pages for details beyond what the roster provides. Refresh the roster weekly, update bios on a separate cadence, and regenerate AI briefs only if the source changes. Keep source URLs and checked dates.
 6. **Failure must not look like a departure.** Validate each firm independently. A blocked, partial, empty-looking, or anomalously small run must not overwrite the last good roster. Save per-firm status and timestamps. Compare only validated complete rosters. Say “newly listed” or “no longer listed,” not “joined” or “left,” unless confirmed by a credible source. The first snapshot has no historical changes. Not-yet-implemented firms and unverified coverage must be visible.
 7. **Optional AI second.** The preferred UI is a searchable directory with a side panel, “Ask about this partner.” Start with the saved profile and give sourced answers. Optionally add Gemini with Google Search grounding for a question the profile cannot answer. Keep the answer separate from the roster, cite source/date, and say when evidence is missing. Suggested call openers must be presented as suggestions. AI could normalize ambiguous practice labels with supporting evidence, but deterministic fields do not need it. No MCP server, agentic crawler, vector store, or Vertex/Agent Search index for the MVP. If using Gemini/Vertex AI, make it optional so the reviewers can run directory and refresh locally without GCP credentials. FastAPI is a candidate for the later service/UI, not necessary for the first scraper.
@@ -31,10 +31,10 @@ Suggested first instruction to Codex:
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
-python -m pip install -r requirements.txt
+python -m pip install requests beautifulsoup4 pyyaml
 ```
 
-Work from the project root. Keep `.venv/`, secrets, and generated JSON snapshots out of Git. Run `python -m unittest discover -s pipeline/tests -v` for the test suite. For a live smoke test, run `python -m pipeline.refresh --firm paul_weiss` and inspect `mock_database/partner_entries/paul_weiss.json`. Use `python -m pipeline.refresh --profile-limit 10` to refresh the combined roster and exercise profile enrichment on up to ten entries.
+Work from the project root. Keep `.venv/`, secrets, and the local generated DB out of Git unless intentionally shipping a safe sample. Add reproducible dependencies and setup instructions. First do **one Paul, Weiss M&A page**, verify names/URLs, save it to SQLite, run twice, and check there are 12 unique rows if the page still returns 12. This is a parser/DB smoke test, not a production roster. Then verify page 2, implement full pagination, add Corporate, and deduplicate. Build a second adapter with a different response shape before abstracting further. Prefer full roster coverage and refresh reliability over live web chat.
 
 ## What the captured requests mean
 

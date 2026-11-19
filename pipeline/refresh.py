@@ -46,7 +46,7 @@ from pipeline.profile_enrichment import (
     enrich_entries,
     load_profile_sources,
 )
-from pipeline.storage.json_database import JsonDatabase
+from pipeline.storage.sqlite_database import SQLiteDatabase
 
 
 def parse_args() -> argparse.Namespace:
@@ -79,7 +79,7 @@ def refresh_firm(
     firm_key: str,
     config: dict[str, Any],
     args: argparse.Namespace,
-    database: JsonDatabase,
+    database: SQLiteDatabase,
 ) -> tuple[dict[str, Any], int, ExtractionResult | None]:
     connector = build_connector(firm_key, config)
     try:
@@ -142,7 +142,7 @@ def main() -> int:
         if not firm_keys:
             raise SystemExit("No refresh-enabled firms are configured")
 
-    database = JsonDatabase()
+    database = SQLiteDatabase()
     firm_payloads: dict[str, dict[str, Any]] = {}
     verified_results: list[ExtractionResult] = []
     exit_codes: list[int] = []
@@ -159,10 +159,10 @@ def main() -> int:
             verified_results.append(verified_result)
 
     if args.firm:
-        firm_payloads[args.firm]["database"]["path"] = str(database.root)
+        firm_payloads[args.firm]["database"]["path"] = str(database.path)
         firm_payloads[args.firm]["profile_enrichment"] = {
             "status": "skipped",
-            "reason": "Profile enrichment consumes the combined all_partners.json snapshot",
+            "reason": "Profile enrichment consumes the combined partner_entries_all table",
         }
         print(json.dumps(firm_payloads[args.firm], indent=2, ensure_ascii=False))
         return exit_codes[0]
@@ -203,6 +203,7 @@ def main() -> int:
             "status": "complete" if not enrichment.failures else "partial",
             "source": str(combined_path),
             "database": str(profiles_path),
+            "failures_table": "partner_profile_failures_all",
             "input_count": len(unified_entries),
             "attempted_count": (
                 len(unified_entries)
@@ -226,7 +227,7 @@ def main() -> int:
             for firm_key, payload in firm_payloads.items()
         },
         "database": {
-            "path": str(database.root),
+            "path": str(database.path),
             "all_partner_entries": str(combined_path) if combined_path else None,
         },
         "profile_enrichment": profile_output,
