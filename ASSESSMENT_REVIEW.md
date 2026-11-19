@@ -41,3 +41,33 @@ I used these criteria to decide what the prototype needed to demonstrate and wha
 The default refresh enables Paul Weiss, Cravath, Quinn Emanuel, Milbank, and Sullivan & Cromwell. The pipeline updates the combined roster for firms that pass extraction and scope checks. The recruiter directory displays active profiles after enrichment has been saved, so roster and profile counts measure different stages.
 
 A blocked, broken, or partial response leaves that firm’s listing status intact. The refresh reports the issue even when other firms update successfully. In production I would show each firm’s last verified update in the directory.
+
+## Ideas and future improvements
+
+- **Automate firm discovery and scraper setup.** I would build an AI-assisted tool that takes a list of firm names and optional homepages. It would find official directories and practice pages, identify how the site lists profiles, and propose settings for a shared scraper or draft a connector where needed. A trial run would show which roles, practices, offices, and pages it captured. A reviewer would approve the source before it enters the regular refresh. I would test this first on a firm with a verified list and a firm we don’t yet cover, then compare completeness and manual effort.
+- **Schedule and monitor weekly updates.** I would use an orchestration tool such as Google Cloud Composer to run the existing refresh command on a schedule. Each run would record which firms succeeded, flag unexpected drops in results, and alert an operator when a source needs attention. I would prevent overlapping runs, show the last verified date for each firm in the directory, and prioritise collecting details for new or stale profiles. [Google Cloud scheduling guide](https://docs.cloud.google.com/composer/docs/composer-3/schedule-and-trigger-dags)
+- **Replace the Google link with an AI research assistant.** I would add a retrieval-augmented generation (RAG) assistant alongside the directory. A recruiter could ask, for example, what deals a partner has advised on recently. The assistant would use the saved profile for context, search the web when the question goes beyond it, and summarise the results as part of the conversation. Answers would link to their sources, show dates where available, and explain when the evidence is incomplete or the person’s identity is unclear.
+- **Track moves between firms and support lateral-hire research.** I would record additions and removals after each firm’s first verified list, then use those observations to flag possible moves. A recruiter could review the source links and dates. A destination firm’s announcement or other corroborating evidence would support marking a move as confirmed. The system would record when it observed the change and the effective date when a source provides one.
+
+## Time log
+
+The Git timeline covers approximately **5 hours and 6 minutes**, from the initial commit on 18 November to the documentation milestone on 19 November 2026. I spent the interval between the initial commit and the first project structure planning my approach and organising the work. That time is included in the estimate. The figures come from commit timestamps, so they give an approximate work window rather than a stopwatch total.
+
+| Date | UK time | Milestone | Commit |
+| --- | --- | --- | --- |
+| 18 November | 21:44 | Initial repository commit | `68fa73e` |
+| 18 November | 23:50 | Planning and organisation, followed by the initial project structure | `07642f1` |
+| 19 November | 00:59 | Refresh pipeline and JSON prototype | `032ce16` |
+| 19 November | 01:04 | SQLite storage | `6164393` |
+| 19 November | 01:28 | Partner directory and live research interface | `e5e6d28` |
+| 19 November | 01:52 | SQLite-backed API and frontend integration | `08789df` |
+| 19 November | 02:26 | Expanded firm coverage and Recent changes preview | `d8c7567` |
+| 19 November | 02:50 | README, development log, and assessment review | `817ea8a` |
+
+## How I used AI
+
+- **Brainstorming the recruiter workflow.** I used AI to explore how recruiters prepare for calls and track market changes. I settled on a searchable directory with source-backed profiles and live research.
+- **Exploring and building the pipeline.** I used AI to work through scraping options and identify what I needed from each site, including the directory URL, request method, role and practice filters, and a way to check whether all results had been retrieved. I built scraping scripts and used AI to help implement additional connectors. I checked the outputs against live responses, reported totals where available, and profile enrichment runs.
+- **Evaluating design tradeoffs.** I used AI to challenge design choices and identify limitations. When Simpson Thacher’s endpoint failed, I examined how waiting for every firm held back valid results. I changed the refresh policy so verified firms can update and a failed firm keeps its last verified data. A regression test checks that behaviour.
+- **Building the interface and API scaffold.** Once I had settled the frontend concept, I used AI to build the frontend and scaffold the FastAPI application. That helped me spend more of the assessment on the collection pipeline, data quality, and backend integration.
+- **Refining the documentation.** I used AI to organise the README, development log, and assessment review and improve their clarity and grammar.
