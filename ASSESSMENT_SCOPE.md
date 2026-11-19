@@ -1,0 +1,29 @@
+# Assessment scope
+
+The target is every Corporate and M&A partner across all offices at the 15 firms named in the brief. This ledger records what I could verify during the assessment. It reflects the source review and local runs as of 19 November 2026. [Source configuration](pipeline/firms.yaml)
+
+## Coverage by firm
+
+| Firm | Status | Evidence and remaining work |
+| --- | --- | --- |
+| Kirkland & Ellis | Direct access blocked | The official directory has Practice, Level, and Office filters in web review. A direct directory request returned HTTP 403. The captured results endpoint previously returned HTTP 500. [Directory](https://www.kirkland.com/lawyers) |
+| Wachtell, Lipton, Rosen & Katz | Automated access blocked | The directory exposes an attorney search, but the refresh runner received HTTP 403. Corporate is the documented scope candidate. Seek an approved source and verify coverage before enabling. [Directory](https://www.wlrk.com/attorneys/) |
+| Quinn Emanuel Urquhart & Sullivan | Enabled for M&A Litigation | The practice team's View More endpoint returned 62 attorney cards, including 60 partners and a chair counted among those partners, with no further pages. A linked profile passed enrichment. This roster covers the firm's published M&A Litigation team. The firm describes itself as litigation-only and says it has no corporate transactional practice. [Directory](https://www.quinnemanuel.com/attorneys) · [M&A Litigation](https://www.quinnemanuel.com/practice-areas/mergers-acquisitions-litigation/) |
+| Davis Polk & Wardwell | Directory access blocked | The directory returned HTTP 403 during web review. The official M&A practice page was accessible. Verify authorised access to a complete source, including Corporate filters and pagination. [Directory](https://www.davispolk.com/lawyers) · [M&A practice](https://www.davispolk.com/mergers-acquisitions) |
+| Simpson Thacher & Bartlett | Legacy endpoint failed | The configured results endpoint returned HTTP 404. The official team page still exposes Practice, Office, and Position filters. Its all-lawyers view is a candidate for replacing the endpoint and re-verifying both practice filters. [Directory](https://www.stblaw.com/our-team) |
+| Paul, Weiss, Rifkind, Wharton & Garrison | Enabled | The combined refresh stored 216 active entries across Corporate and M&A. At the time of the check, 214 active profiles had saved enrichment. [Directory](https://www.paulweiss.com/professionals) |
+| Gibson, Dunn & Crutcher | Directory found | The public page has attorney cards and a known M&A filter. The broader Corporate mapping, subsequent result batches, and a pipeline connector still need verification. [Directory](https://www.gibsondunn.com/people/) |
+| Latham & Watkins | Directory found | The firm has official People and M&A pages. Verify how search combines Partner, practice, and office filters, and how it pages through the results. [Directory](https://www.lw.com/en/people) · [M&A practice](https://www.lw.com/en/practices/mergers-and-acquisitions) |
+| Cravath, Swaine & Moore | Enabled | The Corporate and M&A searches matched their reported totals. The combined refresh stored 65 unique active entries. A limited test enriched three profiles and the API returned all three. [Directory](https://www.cravath.com/people/index.html) |
+| Milbank | Enabled | The scope includes the firm's Corporate and M&A filters, Distressed M&A, and explicit regional equivalents. The connector checks pagination without an office restriction and retains Partner results. Mixed and adjacent labels do not qualify on their own. [Directory](https://www.milbank.com/en/professionals/index.html) |
+| Sullivan & Cromwell | Enabled | The firm calls its Corporate group General Practice. The connector uses that filter plus M&A and Financial Services M&A. Sorting by source record ID prevents overlap across pages. [Directory](https://www.sullcrom.com/LawyerListing) · [Corporate group](https://www.sullcrom.com/careers/your-career-at-sc) |
+| Paul Hastings | Directory found | The directory showed a loading shell in web review. An M&A facet is known. The results feed, broader Corporate mapping, Partner filter, and pagination remain unverified. [Directory](https://www.paulhastings.com/professionals) |
+| Skadden, Arps, Slate, Meagher & Flom | Directory found | The directory exposes Practice, Location, Position, and View More controls. The initial response contains a result template. Verify rendered partner results and the entire page sequence. [Directory](https://www.skadden.com/Professionals) |
+| King & Spalding | Directory found | The official M&A capability links to a people search. The Corporate mapping and all-office Partner results remain unverified. [Directory](https://www.kslaw.com/people) · [M&A capability](https://www.kslaw.com/capabilities/mergers-acquisitions-m-a) |
+| Weil, Gotshal & Manges | Directory found | The directory exposes M&A, Partner, and Office filters. Cross-check the Corporate department against the directory filters and verify full pagination. [Directory](https://www.weil.com/people) · [Corporate department](https://www.weil.com/experience/departments/corporate) |
+
+## How coverage affects the product
+
+The default refresh enables Paul Weiss, Cravath, Quinn Emanuel, Milbank, and Sullivan & Cromwell. The current pipeline updates the combined roster after every enabled source passes extraction and scope checks. The recruiter directory displays active profiles after enrichment has been saved, so roster and profile counts measure different stages.
+
+A blocked, broken, or partial response leaves listing status intact. At higher firm counts, I would publish verified snapshots independently per firm, retain the last good snapshot when a source fails, and show its freshness in the directory.

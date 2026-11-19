@@ -107,6 +107,7 @@ class SullivanCromwellConnector(Connector):
             ("wt", "json"),
             ("start", str(start)),
             ("rows", str(rows)),
+            ("sort", "id asc"),
             (
                 "fl",
                 "id,title,custom_s_proftype,custom_s_office_title,custom_s_url",

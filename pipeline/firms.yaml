@@ -5,6 +5,11 @@
 # type describes the results endpoint response, not the bio page.
 # iterSuffix values are examples from DevTools, not full-roster filters.
 # Do not publish a roster until role, practice, all offices, and pagination are verified.
+# source_status records the source review on 2026-11-19, including previous
+# connector checks where noted. It is documentation, not a refresh setting.
+# practice_reference_url and alternate_directory_url are discovery leads only.
+# Enable scheduled refreshes only after the connector has completed a verified
+# roster and a profile parser is configured.
 
 kirkland:
   refresh_enabled: false
@@ -19,6 +24,8 @@ kirkland:
   accepted_roles:
     - Partner
   scope_verified: false
+  source_status: endpoint_failed
+  source_review: "The official directory exposes Practice, Level, Office, and See More in web review, but a direct directory request returned HTTP 403. The connector previously received a server error from the results endpoint."
   notes: "Captured letter examples only. Confirm GET, Corporate/M&A filters, and pagination."
 
 wachtell_lipton:
@@ -33,17 +40,27 @@ wachtell_lipton:
     asf_pa: corporate
     asf_p: partner
   minimum_expected_records: 5
+  source_status: automated_access_blocked
+  source_review: "Official Attorney Search and View All are visible in web review. The refresh runner previously received HTTP 403. Record the access block and seek an approved source."
   notes: "Corporate is the documented scope rule because no general M&A option is published. Direct automated requests currently return 403."
 
 quinn_emanuel:
-  refresh_enabled: false
+  refresh_enabled: true
   name: "Quinn Emanuel Urquhart & Sullivan"
   directory_url: "https://www.quinnemanuel.com/attorneys"
   results_url: "https://www.quinnemanuel.com/Umbraco/surface/AttorneysListSurface/GetAttorneyListByFilter"
   method: POST
   type: html
-  iterSuffix: "?byCountry=1757&byChar=[x]&byProfileType=&bySearch=&byOffice=&byPracticeArea=&byLawClerk=&byAdp="
-  notes: "Captured example only. Verify country scope, role and practice IDs, and any POST body. Keep litigation practice labels distinct from transactional M&A."
+  iterSuffix: "?byCountry=1757&byChar=all&byProfileType=&bySearch=&byOffice=&byPracticeArea=&byLawClerk=&byAdp=&currentPage=1"
+  page_param: currentPage
+  source_status: roster_verified
+  practice_reference_url: "https://www.quinnemanuel.com/practice-areas/mergers-acquisitions-litigation/"
+  practice_results_url: "https://www.quinnemanuel.com/Umbraco/surface/PracticeAreasSurface/GetAttorneyListBySize"
+  practice_id: 12135
+  practice_label: "Mergers & Acquisitions Litigation"
+  practice_page_size: 100
+  source_review: "The firm is included under its native M&A Litigation practice. The practice team's View More endpoint returned 62 cards, including 60 partners, with no continuation."
+  notes: "Browser capture returned HTTP 200 with 50 attorney cards and a page indicator of 1 of 24. Role, office and profile link are present in the HTML. Verify the country parameter, POST body and later pages before using this for a broader attorney directory."
 
 davis_polk:
   refresh_enabled: false
@@ -54,12 +71,19 @@ davis_polk:
   type: json
   index_name: lawyer_search_en
   pagination: request_body
+  source_status: directory_access_blocked
+  practice_reference_url: "https://www.davispolk.com/mergers-acquisitions"
+  source_review: "The Lawyers directory returned HTTP 403 during web review. The official M&A practice page is accessible and provides a cross-check. The captured search endpoint and full scope remain unverified."
   notes: "Captured Partner-only search. Confirm practice filters and pagination in the JSON payload. Captured key and request ID intentionally omitted."
 
 simpson_thacher:
   refresh_enabled: false
   name: "Simpson Thacher & Bartlett"
   directory_url: "https://www.stblaw.com/our-team"
+  alternate_directory_url: "https://www.stblaw.com/post-handler/alllawyers"
+  practice_reference_url: "https://www.stblaw.com/client-services/practices/corporate/mergers-and-acquisitions/corporate-m-a"
+  source_status: endpoint_failed
+  source_review: "The official Our Team page shows Practice, Office and Position filters and links to an all-lawyers view. The legacy POST endpoint returned HTTP 404 in the latest pipeline check. The all-lawyers view still needs extraction, scope and pagination verification."
   results_url: "https://www.stblaw.com/dataservices/DataServices.Content.Services.Json.AttorneyLookup/TeamMembers"
   method: POST
   type: json
@@ -112,6 +136,8 @@ paul_weiss:
     - Corporate
     - "Mergers and Acquisitions"
   page_param: pagingNumber
+  source_status: roster_verified
+  source_review: "The connector previously completed the Partner roster for Corporate and Mergers and Acquisitions across all offices. Profile enrichment coverage is measured separately."
 
 gibson_dunn:
   refresh_enabled: false
@@ -119,6 +145,8 @@ gibson_dunn:
   directory_url: "https://www.gibsondunn.com/people/"
   filtered_url: "https://www.gibsondunn.com/people/?_people_practices=mergers-and-acquisitions"
   results_url: null
+  source_status: directory_found
+  source_review: "The official directory exposes partner cards with practice and office labels. Verify the broader Corporate mapping and capture how additional filtered batches load."
   notes: "Filtered page shows lawyer cards. Test a plain HTTP fetch and check how later batches are loaded."
 
 latham_watkins:
@@ -126,24 +154,46 @@ latham_watkins:
   name: "Latham & Watkins"
   directory_url: "https://www.lw.com/en/people"
   results_url: null
+  source_status: directory_found
+  practice_reference_url: "https://www.lw.com/en/practices/mergers-and-acquisitions"
+  source_review: "Official People and M&A pages located. Verify how the people search combines practice, Partner role and office filters and loads all pages."
   notes: "Capture the listing request after selecting the practice filter."
 
 cravath:
-  refresh_enabled: false
+  refresh_enabled: true
   name: "Cravath, Swaine & Moore"
   directory_url: "https://www.cravath.com/people/index.html"
-  results_url: null
-  notes: "The Partner section shows practice labels. Check View All for the complete list and exclude Retired Partner."
+  results_url: "https://www.cravath.com/_site/search"
+  method: GET
+  type: json
+  practice_filters:
+    - {label: Corporate, id: 3275}
+    - {label: "Mergers and Acquisitions", id: 3308}
+  source_status: roster_verified
+  source_review: "The official partner search returned the full reported totals for the Corporate and Mergers and Acquisitions filters, without an office restriction. The source exposes Partner separately from Retired Partner."
 
 milbank:
-  refresh_enabled: false
+  refresh_enabled: true
   name: "Milbank"
   directory_url: "https://www.milbank.com/en/professionals/index.html"
-  results_url: null
-  notes: "Capture requests for Corporate and Mergers and Acquisitions filters."
+  results_url: "https://www.milbank.com/_site/search"
+  method: GET
+  type: json
+  page_size: 25
+  scope_verified: true
+  practice_filters:
+    - {label: Corporate, id: 282}
+    - {label: "Mergers and Acquisitions", id: 306}
+    - {label: "Distressed M&A", id: 823}
+    - {label: "Corporate & Securities Germany", id: 42387}
+    - {label: "Mergers & Acquisitions Germany", id: 42642}
+    - {label: "Public M&A Germany", id: 42853}
+    - {label: "Latin America M&A", id: 47837, param: r}
+  source_status: roster_verified
+  source_review: "Assessment scope uses the native Corporate and M&A filters, Distressed M&A and explicit regional equivalents, without an office restriction. Mixed and adjacent labels do not qualify on their own."
 
 sullivan_cromwell:
-  refresh_enabled: false
+  refresh_enabled: true
   name: "Sullivan & Cromwell"
   directory_url: "https://www.sullcrom.com/LawyerListing"
   filtered_url: "https://www.sullcrom.com/LawyerListing?custom_is_practices=69620"
@@ -153,11 +203,15 @@ sullivan_cromwell:
   partner_type_id: 25257
   page_size: 100
   practice_filters:
+    - label: General Practice
+      id: 69631
     - label: "Mergers & Acquisitions"
       id: 69620
-  missing_practices:
-    - Corporate
-  notes: "M&A is verified. No broad native Corporate option is published; Corporate Governance is not treated as equivalent."
+    - label: "Financial Services Mergers & Acquisitions"
+      id: 69675
+  source_status: roster_verified
+  practice_reference_url: "https://www.sullcrom.com/careers/your-career-at-sc"
+  source_review: "The firm calls its Corporate group General Practice. Use that native filter and both explicit M&A filters, without an office restriction. Sort by record ID for stable pagination."
 
 paul_hastings:
   refresh_enabled: false
@@ -165,6 +219,9 @@ paul_hastings:
   directory_url: "https://www.paulhastings.com/professionals"
   filtered_url: "https://www.paulhastings.com/professionals?facets=ph_nested_practice_areas%3DMergers%2B%2526%2BAcquisitions"
   results_url: null
+  source_status: directory_found
+  practice_reference_url: "https://www.paulhastings.com/practices/mergers-and-acquisitions"
+  source_review: "The official directory showed a loading shell in web review. The M&A facet is known, but its results feed, broader Corporate mapping, Partner filter and pagination need verification."
   notes: "M&A facet is in the URL. Check the Partner filter and next-page request."
 
 skadden:
@@ -173,6 +230,8 @@ skadden:
   directory_url: "https://www.skadden.com/Professionals"
   filtered_url: "https://www.skadden.com/professionals?hasSearched=true&practice=8551cacf-412c-4b5f-bfb4-000000037583"
   results_url: null
+  source_status: directory_found
+  source_review: "Official Professionals page exposes Practice, Location, Position and View More. The initial page includes a result template, so verify rendered results and the full paging sequence."
   notes: "M&A practice ID is in the URL. Capture View More and verify which titles and practices are in scope."
 
 king_spalding:
@@ -181,6 +240,9 @@ king_spalding:
   directory_url: "https://www.kslaw.com/people"
   filtered_url: "https://www.kslaw.com/search?filter_capability=Mergers+%26+Acquisitions+%28M%26A%29&section=people"
   results_url: null
+  source_status: directory_found
+  practice_reference_url: "https://www.kslaw.com/capabilities/mergers-acquisitions-m-a"
+  source_review: "The M&A capability and its people search are useful entry points. Verify the Corporate practice mapping and the Partner results across all offices."
   notes: "Official M&A View All link. A zero-result shell is not evidence of an empty roster."
 
 weil:
@@ -188,4 +250,7 @@ weil:
   name: "Weil, Gotshal & Manges"
   directory_url: "https://www.weil.com/people"
   results_url: null
+  source_status: directory_found
+  practice_reference_url: "https://www.weil.com/experience/departments/corporate"
+  source_review: "The People page exposes Mergers & Acquisitions, Partner and Office filters. Cross-check the Corporate department against directory practice mappings and verify all result pages."
   notes: "Use the Practice / Capability filter. The M&A page's Key Contacts section is not the full roster."
