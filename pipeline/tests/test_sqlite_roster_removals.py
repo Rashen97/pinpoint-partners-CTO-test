@@ -12,6 +12,32 @@ from pipeline.tests.test_profile_connector import HTML, SOURCES, entry
 
 
 class SQLiteRosterRemovalTests(unittest.TestCase):
+    def test_partial_import_preserves_verified_rows_and_can_be_promoted(self):
+        verified = entry()
+        preview = replace(
+            verified, partner_entry_id="preview", profile_url="https://example.com/preview"
+        )
+        full = ExtractionResult(
+            verified.firm_key, [verified], extraction_complete=True, scope_verified=True
+        )
+        partial = replace(full, records=[preview], scope_verified=False)
+        with TemporaryDirectory() as directory:
+            database = SQLiteDatabase(Path(directory) / "partners.db")
+            database.save_all_partner_entries([full])
+            database.save_partial_partner_entries(partial)
+            self.assertCountEqual(database.load_all_partner_entries(), [verified, preview])
+            with closing(sqlite3.connect(database.path)) as connection:
+                def preview_scope():
+                    return connection.execute(
+                        "SELECT scope_verified FROM partner_entries_all WHERE partner_entry_id = ?",
+                        (preview.partner_entry_id,),
+                    ).fetchone()[0]
+
+                self.assertEqual(preview_scope(), 0)
+                database.save_all_partner_entries([replace(full, records=[verified, preview])])
+                database.save_partial_partner_entries(partial)
+                self.assertEqual(preview_scope(), 1)
+
     def test_verified_omission_preserves_profile_and_reappearance_reactivates(self):
         partner = entry()
         remaining = replace(

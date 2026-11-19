@@ -6,7 +6,7 @@ from typing import Any
 from urllib.parse import urljoin, urlparse
 
 import requests
-from bs4 import BeautifulSoup, Tag
+from bs4 import BeautifulSoup
 
 from pipeline.connectors.base import Connector
 from pipeline.connectors.errors import ConnectorError, UnexpectedResponseError
@@ -64,28 +64,33 @@ class WachtellLiptonConnector(Connector):
     def _parse(self, html: str, source_url: str) -> list[PartnerEntryInfo]:
         soup = BeautifulSoup(html, "html.parser")
         self._verify_selected_filter(soup, "asf_pa", "corporate")
-        self._verify_selected_filter(soup, "asf_p", "partner")
+        results = soup.select_one(".attorneys-search--results")
+        if results is None or results.select_one(".pagination, .page-numbers, [rel='next']"):
+            raise UnexpectedResponseError("Wachtell returned missing or paginated results")
 
         names_by_url: dict[str, str] = {}
-        for link in soup.select("a[href]"):
-            if not isinstance(link, Tag):
+        for row in results.select("li.attorneys-search--results-item:not(.attorneys-search--results-item-header)"):
+            position = row.select_one(".attorneys-search--results-item-position")
+            if position is None or not position.get_text(strip=True):
+                raise UnexpectedResponseError("Wachtell result row is missing its position")
+            if position.get_text(" ", strip=True).casefold() != "partner":
                 continue
-            href = self._text(link.get("href"))
-            path = urlparse(urljoin(source_url, href)).path.rstrip("/")
-            if "/attorney/" not in f"{path}/" or path == "/attorney":
-                continue
-            profile_url = urljoin(source_url, href)
-            candidates = [
-                link.get_text(" ", strip=True),
-                link.get("aria-label"),
-                link.get("title"),
-            ]
-            image = link.find("img")
-            if isinstance(image, Tag):
-                candidates.append(image.get("alt"))
-            name = next((self._text(value) for value in candidates if self._text(value)), "")
-            if name and len(name) > len(names_by_url.get(profile_url, "")):
-                names_by_url[profile_url] = name
+
+            link = row.select_one("a[href]")
+            name_node = row.select_one(".attorneys-search--results-item-name")
+            if link is None or name_node is None:
+                raise UnexpectedResponseError("Wachtell partner row is missing a name or profile link")
+            name = " ".join(name_node.stripped_strings)
+            profile = urlparse(urljoin(source_url, link["href"]))
+            if (
+                not name or profile.scheme != "https"
+                or profile.netloc != urlparse(source_url).netloc
+                or not profile.path.startswith("/attorney/")
+                or profile.path == "/attorney/"
+            ):
+                raise UnexpectedResponseError("Wachtell partner row has an invalid name or profile link")
+            profile_url = profile._replace(path=profile.path.rstrip("/") + "/", query="", fragment="").geturl()
+            names_by_url[profile_url] = name
 
         if not names_by_url:
             raise UnexpectedResponseError("Wachtell response contained no attorney profile links")
@@ -110,7 +115,3 @@ class WachtellLiptonConnector(Connector):
             raise UnexpectedResponseError(
                 f"Wachtell response did not confirm selected filter {name}={value}"
             )
-
-    @staticmethod
-    def _text(value: Any) -> str:
-        return " ".join(str(value or "").split())

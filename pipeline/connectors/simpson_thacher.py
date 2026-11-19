@@ -1,166 +1,133 @@
-"""Simpson Thacher public team-directory connector."""
-
-from __future__ import annotations
+"""Simpson Thacher's public WordPress staff listing."""
 
 import math
-from typing import Any
-from urllib.parse import urljoin
+import re
+from time import sleep
+from urllib.parse import urljoin, urlsplit
 
 import requests
+from bs4 import BeautifulSoup, Tag
 
 from pipeline.connectors.base import Connector
 from pipeline.connectors.errors import ConnectorError, UnexpectedResponseError
 from pipeline.connectors.http import DEFAULT_TIMEOUT_SECONDS, build_session
 from pipeline.models import ExtractionResult, PartnerEntryInfo
+from pipeline.processing.deduplicate import deduplicate_records
 
 
 class SimpsonThacherConnector(Connector):
-    def __init__(
-        self,
-        firm_key: str,
-        config: dict[str, Any],
-        session: requests.Session | None = None,
-    ) -> None:
+    def __init__(self, firm_key, config, session=None):
         super().__init__(firm_key, config)
         self.session = session or build_session()
-        self.session.headers.update({"X-Requested-With": "XMLHttpRequest"})
 
     def extract(self) -> ExtractionResult:
-        endpoint = self.config.get("results_url")
-        filters = self.config.get("practice_page_filters", [])
-        if not endpoint or not filters:
-            raise ConnectorError("Simpson Thacher endpoint or practice page filters are missing")
-
-        records_by_url: dict[str, PartnerEntryInfo] = {}
+        records = []
         pages_fetched = 0
+        filters = self.config["practice_page_filters"]
         for practice in filters:
-            records, pages = self._extract_practice(
-                endpoint, str(practice["id"]), str(practice["label"])
-            )
+            if pages_fetched:
+                self._pace_requests()
+            batch, pages = self._extract_practice(practice)
+            records.extend(batch)
             pages_fetched += pages
-            for record in records:
-                existing = records_by_url.get(record.profile_url)
-                if existing is None:
-                    records_by_url[record.profile_url] = record
-                else:
-                    existing.practices.extend(
-                        label for label in record.practices if label not in existing.practices
-                    )
-                    existing.offices.extend(
-                        office for office in record.offices if office not in existing.offices
-                    )
-
         return ExtractionResult(
             firm_key=self.firm_key,
-            records=list(records_by_url.values()),
+            records=deduplicate_records(records),
             pages_fetched=pages_fetched,
             extraction_complete=True,
             scope_verified=True,
-            covered_practices=[str(item["label"]) for item in filters],
+            covered_practices=[practice["label"] for practice in filters],
         )
 
-    def _extract_practice(
-        self, endpoint: str, practice_id: str, practice_label: str
-    ) -> tuple[list[PartnerEntryInfo], int]:
-        page_size = int(self.config.get("page_size", 100))
-        first = self._fetch(endpoint, practice_id, 1, page_size)
-        total = first.get(self.config.get("total_key", "total"))
-        if not isinstance(total, int) or total <= 0:
-            raise UnexpectedResponseError(
-                f"Simpson Thacher {practice_label} returned an invalid total"
-            )
+    def _extract_practice(self, practice) -> tuple[list[PartnerEntryInfo], int]:
+        first = self._fetch(practice, 1)
+        total = first.get("total_posts")
+        page_size = first.get("current_posts")
+        if (
+            type(total) is not int or type(page_size) is not int
+            or not 0 < page_size <= total
+        ):
+            raise UnexpectedResponseError("Simpson Thacher reported an invalid result total")
+
         page_count = math.ceil(total / page_size)
-        records: list[PartnerEntryInfo] = []
-        for page_number in range(1, page_count + 1):
-            payload = first if page_number == 1 else self._fetch(
-                endpoint, practice_id, page_number, page_size
-            )
-            rows = payload.get(self.config.get("records_key", "TeamModels"))
-            if not isinstance(rows, list) or not rows:
-                raise UnexpectedResponseError(
-                    f"Simpson Thacher {practice_label} page {page_number} has no rows"
-                )
-            records.extend(
-                self._parse_row(row, endpoint, practice_label)
-                for row in rows
-                if isinstance(row, dict)
-            )
+        records = []
+        seen = set()
+        for page in range(1, page_count + 1):
+            if page == 1:
+                payload = first
+            else:
+                self._pace_requests()
+                payload = self._fetch(practice, page)
+            offset = (page - 1) * page_size
+            end = min(offset + page_size, total)
+            html = payload.get("html")
+            if (
+                not isinstance(html, str)
+                or payload.get("total_posts") != total
+                or payload.get("start_post") != offset + 1
+                or payload.get("end_post") != end
+                or payload.get("current_posts") != end - offset
+            ):
+                raise UnexpectedResponseError(f"Simpson Thacher {practice['label']} page {page} has inconsistent counts")
 
-        unique = {record.profile_url: record for record in records}
-        if len(records) != total or len(unique) != total:
-            raise UnexpectedResponseError(
-                f"Simpson Thacher {practice_label} reported {total} but parsed "
-                f"{len(records)} rows and {len(unique)} unique profiles"
-            )
-        return list(unique.values()), page_count
+            soup = BeautifulSoup(html, "html.parser")
+            rows = soup.select('a[href*="/our-team/partners/"]:has(.wp-avatar-name)')
+            if len(rows) != end - offset:
+                raise UnexpectedResponseError(f"Simpson Thacher {practice['label']} page {page} has an unexpected card count")
+            for row in rows:
+                record = self._parse_row(row, practice)
+                if record.profile_url in seen:
+                    raise UnexpectedResponseError(f"Simpson Thacher {practice['label']} returned a duplicate profile")
+                seen.add(record.profile_url)
+                records.append(record)
+        return records, page_count
 
-    def _fetch(
-        self, endpoint: str, practice_id: str, page: int, page_size: int
-    ) -> dict[str, Any]:
-        data = dict(self.config.get("form_params", {}))
-        data.update(
-            {
-                "practice": "",
-                "pageFilter": self.config["page_filter_type"],
-                "pageFilterId": practice_id,
-                "take": page_size,
-                "skip": (page - 1) * page_size,
-                "page": page,
-                "pageSize": page_size,
-                "searchId": "",
-                "searchCount": 1,
-            }
-        )
+    def _pace_requests(self) -> None:
+        delay = self.config.get("request_interval_seconds", 0)
+        if delay:
+            sleep(delay)
+
+    def _fetch(self, practice, page: int) -> dict:
         try:
-            response = self.session.post(endpoint, data=data, timeout=DEFAULT_TIMEOUT_SECONDS)
+            response = self.session.get(
+                self.config["results_url"],
+                params={
+                    "position": self.config["partner_position_id"],
+                    "practice": practice["id"],
+                    "paged": page,
+                },
+                timeout=DEFAULT_TIMEOUT_SECONDS,
+            )
             response.raise_for_status()
             payload = response.json()
         except (requests.RequestException, ValueError) as exc:
-            raise ConnectorError(f"Simpson Thacher request failed: {exc}") from exc
+            raise ConnectorError(f"Simpson Thacher {practice['label']} page {page} request failed: {exc}") from exc
         if not isinstance(payload, dict):
-            raise UnexpectedResponseError("Simpson Thacher returned non-object JSON")
+            raise UnexpectedResponseError("Simpson Thacher returned invalid listing JSON")
         return payload
 
-    def _parse_row(
-        self, row: dict[str, Any], source_url: str, queried_practice: str
-    ) -> PartnerEntryInfo:
-        name = self._text(row.get("FullName"))
-        role = self._text(row.get("Role"))
-        slug = self._text(row.get("UrlName"))
-        if not name or role.casefold() != "partner" or not slug:
-            raise UnexpectedResponseError(
-                "Simpson Thacher row is missing a name/URL or is not a Partner"
-            )
-        practices = self._labels(row.get("PracticeFocuses"))
-        if queried_practice not in practices:
-            practices.append(queried_practice)
-        offices = self._labels(row.get("Office"))
+    def _parse_row(self, row: Tag, practice) -> PartnerEntryInfo:
+        source = self.config["directory_url"]
+        name_node = row.select_one(".wp-avatar-name")
+        role_node = row.select_one(".wp-avatar-position")
+        name = name_node.get_text(" ", strip=True) if name_node else ""
+        role = role_node.get_text(" ", strip=True) if role_node else ""
+        profile = urlsplit(urljoin(source, row["href"]))
+        practice_nodes = row.select('[data-filter-name="practice"]')
+        if (
+            not name or not re.search(r"\bPartner\b", role)
+            or profile.scheme != "https" or profile.netloc != urlsplit(source).netloc
+            or not re.fullmatch(r"/our-team/partners/[^/]+/?", profile.path)
+            or str(practice["id"]) not in {node.get("data-filter-id") for node in practice_nodes}
+        ):
+            raise UnexpectedResponseError("Simpson Thacher returned a card outside the requested partner practice")
         return PartnerEntryInfo(
             firm_key=self.firm_key,
-            firm_name=self.config.get("name", ""),
+            firm_name=self.config["name"],
             name=name,
             role=role,
-            offices=offices,
-            practices=practices,
-            profile_url=urljoin(
-                self.config["directory_url"], f"/our-team/partners/{slug}"
-            ),
-            source_url=source_url,
-            source_record_id=self._text(row.get("Id") or row.get("ID")) or None,
+            offices=[node.get_text(" ", strip=True) for node in row.select('[data-filter-name="office"]')],
+            practices=[node.get_text(" ", strip=True) for node in practice_nodes],
+            profile_url=profile._replace(query="", fragment="").geturl(),
+            source_url=source,
         )
-
-    @classmethod
-    def _labels(cls, value: Any) -> list[str]:
-        values = value if isinstance(value, list) else [value]
-        labels: list[str] = []
-        for item in values:
-            if isinstance(item, dict):
-                item = item.get("Text") or item.get("Name")
-            text = cls._text(item)
-            if text and text not in labels:
-                labels.append(text)
-        return labels
-
-    @staticmethod
-    def _text(value: Any) -> str:
-        return " ".join(str(value or "").split())

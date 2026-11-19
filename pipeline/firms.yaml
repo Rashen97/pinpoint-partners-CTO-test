@@ -1,15 +1,24 @@
-# Pinpoint Partners assessment — source inventory for all 15 firms.
-# directory_url is the human-facing directory (or practice team view).
-# filtered_url is a known entry point, not proof of a full roster.
-# results_url is a captured network endpoint. Null means not captured.
 # type describes the results endpoint response, not the bio page.
 # iterSuffix values are examples from DevTools, not full-roster filters.
-# Do not publish a roster until role, practice, all offices, and pagination are verified.
+#
+# Verify partner roles, practice scope, office coverage, and pagination
+# before publishing results.
+#
 # source_status records the source review on 2026-11-19, including previous
 # connector checks where noted. It is documentation, not a refresh setting.
 # practice_reference_url and alternate_directory_url are discovery leads only.
-# Enable scheduled refreshes only after the connector has completed a verified
-# roster and a profile parser is configured.
+#
+# refresh_enabled enables validated sources with configured profile parsers.
+# Complete verified rosters can update listing status and detect removals.
+#
+# publish_partial_scope permits publication of complete limited-scope results
+# without inferring removals or overwriting previously verified roster entries.
+#
+# expected_partial_scope identifies intentionally limited coverage.
+# Unexpected partial coverage returns a nonzero exit code for monitoring
+# while preserving previously verified data.
+#
+# Failed or incomplete extractions are not published.
 
 kirkland:
   refresh_enabled: false
@@ -36,12 +45,10 @@ wachtell_lipton:
   method: GET
   type: html
   query_params:
-    asf_l: "View All"
     asf_pa: corporate
-    asf_p: partner
   minimum_expected_records: 5
   source_status: automated_access_blocked
-  source_review: "Official Attorney Search and View All are visible in web review. The refresh runner previously received HTTP 403. Record the access block and seek an approved source."
+  source_review: "A browser capture of the Corporate results contained 122 role-labelled rows including 34 Partners, with no pagination controls. The connector selects Partner rows from the Corporate response. Direct access must pass before enabling."
   notes: "Corporate is the documented scope rule because no general M&A option is published. Direct automated requests currently return 403."
 
 quinn_emanuel:
@@ -63,56 +70,42 @@ quinn_emanuel:
   notes: "Browser capture returned HTTP 200 with 50 attorney cards and a page indicator of 1 of 24. Role, office and profile link are present in the HTML. Verify the country parameter, POST body and later pages before using this for a broader attorney directory."
 
 davis_polk:
-  refresh_enabled: false
+  refresh_enabled: true
+  publish_partial_scope: true
   name: "Davis Polk & Wardwell"
   directory_url: "https://www.davispolk.com/lawyers"
+  practice_team_url: "https://www.davispolk.com/mergers-acquisitions/team"
+  corporate_team_url: "https://www.davispolk.com/corporate/team"
+  corporate_overview_url: "https://www.davispolk.com/corporate"
+  minimum_corporate_practices: 22
+  request_interval_seconds: 0.7
+  verified_partner_titles:
+    # https://www.davispolk.com/firm-news/davis-polk-welcomes-leading-bsa-aml-lawyer-daniel-stipano-dc
+    /lawyers/daniel-stipano: "Head of AML/CFT"
   results_url: "https://dbc8kua830-dsn.algolia.net/1/indexes/*/queries"
   method: POST
   type: json
   index_name: lawyer_search_en
   pagination: request_body
-  source_status: directory_access_blocked
+  source_status: roster_verified
   practice_reference_url: "https://www.davispolk.com/mergers-acquisitions"
-  source_review: "The Lawyers directory returned HTTP 403 during web review. The official M&A practice page is accessible and provides a cross-check. The captured search endpoint and full scope remain unverified."
-  notes: "Captured Partner-only search. Confirm practice filters and pagination in the JSON payload. Captured key and request ID intentionally omitted."
+  source_review: "The connector follows the Corporate overview's published practice list and checks each public team pager with Partner and all offices selected. A group with no Partner cards requires a separate complete non-partner listing to verify zero. If a practice cannot be verified, the result remains partial."
+  notes: "All 22 published Corporate groups were verified across 76 requests for team pages, including the Environmental zero-Partner check. The Algolia URL is historical discovery evidence."
 
 simpson_thacher:
   refresh_enabled: false
   name: "Simpson Thacher & Bartlett"
-  directory_url: "https://www.stblaw.com/our-team"
-  alternate_directory_url: "https://www.stblaw.com/post-handler/alllawyers"
-  practice_reference_url: "https://www.stblaw.com/client-services/practices/corporate/mergers-and-acquisitions/corporate-m-a"
-  source_status: endpoint_failed
-  source_review: "The official Our Team page shows Practice, Office and Position filters and links to an all-lawyers view. The legacy POST endpoint returned HTTP 404 in the latest pipeline check. The all-lawyers view still needs extraction, scope and pagination verification."
-  results_url: "https://www.stblaw.com/dataservices/DataServices.Content.Services.Json.AttorneyLookup/TeamMembers"
-  method: POST
+  directory_url: "https://www.stblaw.com/our-team/"
+  results_url: "https://www.stblaw.com/wp-json/stb/v1/staff-listing"
+  method: GET
   type: json
-  body_type: form
-  records_key: TeamModels
-  total_key: total
-  page_size: 100
-  page_filter_type: "Telerik.Sitefinity.DynamicTypes.Model.MainSiteInformation.PracticeArea"
+  partner_position_id: "7972"
+  request_interval_seconds: 3.5
   practice_page_filters:
-    - label: Corporate
-      id: "1f4fcb0e-743d-6a02-aaf8-ff0000765f2c"
-    - label: "Mergers and Acquisitions"
-      id: "9250cb0e-743d-6a02-aaf8-ff0000765f2c"
-  form_params:
-    position: "b4e5c90e-743d-6a02-aaf8-ff0000765f2c"
-    practice: ""
-    offices: ""
-    take: 8
-    skip: 0
-    page: 1
-    pageSize: 8
-    clientSolutions: ""
-    industries: ""
-    law[]: ""
-    lawSchoolName: ""
-    school[]: ""
-    schoolName: ""
-    selectedLetter: ""
-    roleId: ""
+    - {label: Corporate, id: "102726"}
+    - {label: "Mergers and Acquisitions", id: "103036"}
+  source_status: rate_limited
+  source_review: "Replaced the legacy endpoint with the public Our Team listing API. The site reported 421 Corporate and 153 M&A results. The first 20 Corporate pages validated before HTTP 429. A paced retry was still rate limited. Full roster and current profile selectors need verification before enabling."
     
 paul_weiss:
   refresh_enabled: true
@@ -140,14 +133,26 @@ paul_weiss:
   source_review: "The connector previously completed the Partner roster for Corporate and Mergers and Acquisitions across all offices. Profile enrichment coverage is measured separately."
 
 gibson_dunn:
-  refresh_enabled: false
+  refresh_enabled: true
+  publish_partial_scope: true
+  expected_partial_scope: true
   name: "Gibson, Dunn & Crutcher"
   directory_url: "https://www.gibsondunn.com/people/"
   filtered_url: "https://www.gibsondunn.com/people/?_people_practices=mergers-and-acquisitions"
-  results_url: null
-  source_status: directory_found
-  source_review: "The official directory exposes partner cards with practice and office labels. Verify the broader Corporate mapping and capture how additional filtered batches load."
-  notes: "Filtered page shows lawyer cards. Test a plain HTTP fetch and check how later batches are loaded."
+  results_url: "https://www.gibsondunn.com/?wpgb-ajax=refresh"
+  request_interval_seconds: 1
+  corporate_scope_reference_url: "https://www.gibsondunn.com/wp-content/uploads/2025/08/LE-Recruiting-TrainingWithGDCLondon-0825-v4.pdf"
+  practice_filters:
+    - {label: Mergers and Acquisitions, slug: mergers-and-acquisitions}
+    - {label: Capital Markets, slug: capital-markets}
+    - {label: Private Equity, slug: private-equity}
+    - {label: Finance, slug: global-finance}
+    - {label: Investment Funds, slug: investment-funds}
+  method: POST
+  type: json
+  source_status: partial_scope
+  source_review: "Five published practice filters returned 278 unique current partners across 32 batches. Each batch sequence matched the reported result total before excluding non-partner titles and deduplicating across practices."
+  notes: "Four newly covered profiles passed enrichment. The London programme materials support the selected practices but are not a complete global Corporate practice map."
 
 latham_watkins:
   refresh_enabled: false

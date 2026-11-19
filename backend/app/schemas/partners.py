@@ -13,11 +13,13 @@ class PartnerEntry(BaseModel):
     offices: list[str] = Field(default_factory=list)
     practices: list[str] = Field(default_factory=list)
     profile_url: str
+    scope_verified: bool = True
 
 
 class RosterCoverage(BaseModel):
     verified_firm_count: int
     target_firm_count: int
+    partial_firm_count: int = 0
 
 
 class RosterChange(BaseModel):

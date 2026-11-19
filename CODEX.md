@@ -35,7 +35,7 @@ Run from the repository root in PowerShell. See the README for the complete setu
 
 ## Source coverage
 
-The verified default refresh covers five firms. A live directory-only run observed **575 active entries**. Counts are point-in-time observations. Consult SQLite or the API for the current profile count.
+The default refresh runs six verified firms plus Gibson Dunn with partial practice coverage. The frontend reports six verified firms and one with partial coverage. Counts are point-in-time observations. Consult SQLite or the API for current enrichment counts.
 
 | Enabled firm | Verified source and scope | Observed entries |
 | --- | --- | ---: |
@@ -44,10 +44,11 @@ The verified default refresh covers five firms. A live directory-only run observ
 | Milbank | Paginated attorney cards for Corporate, M&A, Distressed M&A, and explicit regional filters | 79 |
 | Quinn Emanuel | Official M&A Litigation practice team, kept under its native label | 60 |
 | Sullivan & Cromwell | General Practice (the firm's Corporate group) and both explicit M&A filters, sorted by source ID for stable pagination | 155 |
+| Davis Polk | All 22 published Corporate practice groups, including M&A, with all offices selected | 190 |
 
-Simpson Thacher’s legacy results endpoint returned HTTP 404. The official team and all-lawyers views are leads for a replacement. Kirkland’s direct directory request and Wachtell’s filtered request returned HTTP 403 in testing. Davis Polk’s directory also returned HTTP 403 during review. Refer to the assessment review for all remaining firms and the evidence behind each status.
+Simpson Thacher’s connector now uses the current public staff-listing API. Both practice filters returned distinct pages, but the full Corporate run hit HTTP 429 after 20 pages. Keep the firm disabled until a paced run verifies both complete rosters and the current profile selectors. Kirkland’s direct directory request returned HTTP 403. Wachtell stays disabled because its Corporate request returned HTTP 403 from the Python runner. The parser extracted 34 Corporate partners from 122 role-labelled rows in a browser capture. A saved capture verifies the parser, and a repeatable live source is required for automatic refresh. If a Davis Polk practice fails validation in a future run, its explicit partial setting preserves the last verified roster while publishing observed data. Refer to the assessment review for all remaining firms and the evidence behind each status.
 
-Earlier discovery also identified a WP Grid Builder load-more control at Gibson Dunn and Coveo configuration at Latham. Both still need verification of the actual request, practice scope, and completion of pagination. Quinn Emanuel’s general directory POST capture demonstrated HTML attorney cards and paging. The implemented connector uses the separate M&A Litigation practice-team endpoint.
+Gibson Dunn's connector follows the WP Grid Builder load-more control and verified 278 partners across M&A, Capital Markets, Private Equity, Finance, and Investment Funds. The firm’s London training materials support the additional groups. Its full global Corporate scope remains unverified. Latham’s Coveo configuration is a lead for checking the directory request. Quinn Emanuel’s general directory POST capture demonstrated HTML attorney cards and paging. The implemented connector uses the separate M&A Litigation practice-team endpoint.
 
 When verifying a new source, distinguish directory discovery, a successful test request, complete roster coverage, and successful profile enrichment. Check the site's access rules, use public requests, and stop on persistent access blocks. Inspect the actual query, request body, and response together. Keep firm-native practice labels and document the scope decision when a label is ambiguous.
 
@@ -57,3 +58,20 @@ When verifying a new source, distinguish directory discovery, a successful test 
 - Build and evaluate bulk onboarding from a firm name and optional homepage. Discover candidate directories and profile links, reuse common extraction patterns, and check sample results. Review practice scope and completeness before enabling a firm.
 - Record first sightings after each firm's verified baseline. Require corroborating evidence before presenting a confirmed cross-firm move.
 - Before handoff, verify the clean-checkout run path and report actual coverage, enrichment, and known failures separately. Describe proposed work as planned.
+
+
+## Refresh reliability refinement
+
+- publish_partial_scope controls whether complete limited-scope
+  extractions may be published.
+- expected_partial_scope controls whether partial coverage is an
+  accepted operational outcome.
+- Unexpected partial coverage returns a nonzero exit code during
+  the default refresh while still publishing eligible observations.
+- Failed or incomplete extractions are rejected.
+- Partial publication does not infer removals or overwrite previously
+  verified roster entries.
+- The latest regression suite contains 34 passing tests.
+
+Historical count anomaly detection, visible per-firm freshness and
+scheduled production execution remain planned improvements.

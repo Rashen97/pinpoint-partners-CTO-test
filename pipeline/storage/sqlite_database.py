@@ -107,8 +107,26 @@ class SQLiteDatabase:
             self._insert(
                 connection,
                 "partner_entries_all",
-                (*ENTRY_COLUMNS, "no_longer_listed_at"),
-                [dict(record, no_longer_listed_at=None) for record in records],
+                (*ENTRY_COLUMNS, "no_longer_listed_at", "scope_verified"),
+                [dict(record, no_longer_listed_at=None, scope_verified=True) for record in records],
+                upsert=True,
+            )
+        return "partner_entries_all"
+
+    def save_partial_partner_entries(self, result: ExtractionResult) -> str:
+        if result.scope_verified or not result.extraction_complete or not result.records:
+            raise ValueError("Partial import requires a complete extraction of a limited scope")
+        if any(
+            not record.partner_entry_id or record.firm_key != result.firm_key
+            for record in result.records
+        ):
+            raise ValueError("Missing or invalid roster records")
+        with self._transaction() as connection:
+            self._insert(
+                connection,
+                "partner_entries_all",
+                (*ENTRY_COLUMNS, "scope_verified"),
+                [dict(asdict(record), scope_verified=False) for record in result.records],
                 upsert=True,
             )
         return "partner_entries_all"
@@ -132,6 +150,8 @@ class SQLiteDatabase:
         self,
         profiles: list[PartnerProfileInfo],
         failures: list[ProfileEnrichmentFailure],
+        *,
+        firm_key: str | None = None,
     ) -> str:
         with self._transaction() as connection:
             current_ids = {
@@ -142,7 +162,12 @@ class SQLiteDatabase:
             }
             records = [asdict(profile) for profile in profiles if profile.partner_entry_id in current_ids]
             self._insert(connection, "partner_profiles_all", PROFILE_COLUMNS, records, upsert=True)
-            connection.execute("DELETE FROM partner_profile_failures_all")
+            if firm_key is None:
+                connection.execute("DELETE FROM partner_profile_failures_all")
+            else:
+                connection.execute(
+                    "DELETE FROM partner_profile_failures_all WHERE firm_key = ?", (firm_key,)
+                )
             self._insert(
                 connection,
                 "partner_profile_failures_all",
@@ -198,6 +223,8 @@ class SQLiteDatabase:
                     " WHERE excluded.content_hash IS NOT partner_profiles_all.content_hash"
                     " AND excluded.source_checked_at >= partner_profiles_all.source_checked_at"
                 )
+            elif table == "partner_entries_all" and "no_longer_listed_at" not in columns:
+                updates += " WHERE partner_entries_all.scope_verified = 0"
             sql += f" ON CONFLICT (partner_entry_id) DO UPDATE SET {updates}"
         connection.executemany(
             sql,

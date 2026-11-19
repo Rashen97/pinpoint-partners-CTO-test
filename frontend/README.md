@@ -57,7 +57,7 @@ verified observations:
 ```json
 {
   "records": [],
-  "coverage": { "verified_firm_count": 2, "target_firm_count": 15 },
+  "coverage": { "verified_firm_count": 2, "partial_firm_count": 1, "target_firm_count": 15 },
   "changes": [
     {
       "name": "Alex Morgan",
