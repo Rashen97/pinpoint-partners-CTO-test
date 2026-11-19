@@ -1,5 +1,8 @@
 # Pinpoint partner directory
 
+See the [frontend guide](frontend/README.md) to preview the recruiter directory
+and connect a future backend.
+
 The refresh pipeline is organized as `connectors -> processing -> storage`.
 Every connector returns the same `TargetPartner` model while retaining native
 firm role, office, and practice labels.
