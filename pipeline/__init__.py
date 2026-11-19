@@ -1,0 +1,1 @@
+"""Partner directory refresh pipeline."""
