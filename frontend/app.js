@@ -242,12 +242,18 @@ function showView(activeTab) {
   byId("recent-changes").hidden = !changes;
 }
 
-function renderChanges(changes) {
+const sampleChanges = [
+  { name: "Alex Morgan", firm_name: "Example Firm A", kind: "newly_listed", observed_at: "2026-11-19" },
+  { name: "Robin Ellis", firm_name: "Example Firm B", kind: "no_longer_listed", observed_at: "2026-11-18" },
+  { name: "Sam Chen", firm_name: "Example Firm B", kind: "newly_listed", observed_at: "2026-11-17" },
+];
+
+function changeRows(changes) {
   const labels = new Map([
     ["newly_listed", "Newly listed"],
     ["no_longer_listed", "No longer listed"],
   ]);
-  const rows = (Array.isArray(changes) ? changes : [])
+  return changes
     .filter((change) => labels.has(change.kind))
     .sort((a, b) => Date.parse(b.observed_at) - Date.parse(a.observed_at))
     .map((change) => {
@@ -264,11 +270,17 @@ function renderChanges(changes) {
       if (source) row.append(source);
       return row;
     });
-  byId("changes-list").replaceChildren(...rows);
+}
+
+function renderChanges(changes) {
+  const liveRows = changeRows(Array.isArray(changes) ? changes : []);
+  byId("changes-list").replaceChildren(...liveRows);
+  byId("sample-changes-list").replaceChildren(...changeRows(sampleChanges));
+  byId("sample-changes").open = liveRows.length === 0;
   byId("changes-status").textContent = api.demo
-    ? "Sample roster changes"
+    ? ""
     : !Array.isArray(changes) ? "Roster change history is unavailable."
-    : rows.length ? "" : "No roster changes reported.";
+    : liveRows.length ? "" : "No roster changes reported.";
 }
 
 async function start() {

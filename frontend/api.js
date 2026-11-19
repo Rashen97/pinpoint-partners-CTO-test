@@ -39,10 +39,6 @@ export function createDirectoryApi(baseUrl) {
       if (!base) {
         return {
           records: demoRecords,
-          changes: [
-            { name: "Alex Morgan", firm_name: "Paul Weiss", kind: "newly_listed", observed_at: "2026-11-16" },
-            { name: "Robin Ellis", firm_name: "Simpson Thacher", kind: "no_longer_listed", observed_at: "2026-11-16" },
-          ],
         };
       }
       const data = await request("/partners");

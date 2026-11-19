@@ -91,10 +91,12 @@ dialog::backdrop { background: #15151d80; }
 .changes-card { padding: 22px; border: 1px solid var(--line); border-radius: 10px; background: white; }
 #changes-status { color: var(--muted); }
 #changes-status:empty, #changes-list:empty { display: none; }
-#changes-list { list-style: none; margin: 16px 0 0; padding: 0; }
-#changes-list li { display: grid; gap: 5px; padding-block: 13px; border-top: 1px solid var(--line); }
-#changes-list span, #changes-list a { font-size: .875rem; }
-#changes-list span { color: var(--muted); }
+#changes-list, #sample-changes-list { list-style: none; margin: 16px 0 0; padding: 0; }
+.changes-card li { display: grid; gap: 5px; padding-block: 13px; border-top: 1px solid var(--line); }
+.changes-card li span, .changes-card li a { font-size: .875rem; }
+.changes-card li span { color: var(--muted); }
+.sample-changes { margin-top: 16px; }
+.sample-changes summary { cursor: pointer; color: var(--muted); font-weight: 650; }
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
 @media (max-width: 860px) {
   .shell { width: calc(100% - 40px); }

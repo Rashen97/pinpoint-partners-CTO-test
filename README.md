@@ -72,8 +72,11 @@ input and saves enriched profiles in `partner_profiles_all`.
 | Firm | Current status | Coverage |
 |---|---|---|
 | Paul Weiss | Live verified | Corporate and Mergers and Acquisitions |
-| Simpson Thacher | Live verified | Corporate and Mergers and Acquisitions |
-| Sullivan & Cromwell | Live, intentionally partial | Mergers & Acquisitions; broad Corporate filter missing |
+| Cravath | Enabled | Verified Corporate and Mergers and Acquisitions partner searches |
+| Quinn Emanuel | Enabled | Verified Mergers & Acquisitions Litigation practice team, using the firm's native scope |
+| Milbank | Enabled | Corporate, M&A, Distressed M&A, and explicit regional filters |
+| Simpson Thacher | Disabled after legacy endpoint returned HTTP 404 | Corporate and Mergers and Acquisitions need re-verification on the replacement source |
+| Sullivan & Cromwell | Enabled | General Practice (the firm's Corporate group) and both explicit M&A filters |
 | Wachtell Lipton | Implemented, runner blocked by HTTP 403 | Corporate rule; no general M&A option published |
 | Kirkland & Ellis | Implemented against captured JSON, source currently failing | Corporate/M&A filters unverified |
 

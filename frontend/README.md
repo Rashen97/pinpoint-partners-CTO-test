@@ -11,7 +11,8 @@ FastAPI backend on port 8001 by default. Start the backend as described in the
 [project README](../README.md). For a standalone sample preview, set the
 `api-base` meta tag in `index.html` to an empty string. Saved partners are
 stored in the current browser.
-Recent changes uses sample events in preview. The research form starts blank
+Recent changes includes a fictional sample preview that opens automatically
+when there are no live changes. The research form starts blank
 on sample profiles. On a connected roster, open a
 partner profile to edit a name-and-firm query or add a topic, then open Google
 in a new tab. Google receives the query when the recruiter submits it.

@@ -1,3 +1,13 @@
+cravath:
+  selectors:
+    name: "h1"
+    biography: ".tabpane--text .rte[class*='onlyShowInPrint']"
+
+milbank:
+  selectors:
+    name: ".attorney-header__name"
+    biography: ".attorney-left-content-header:has(> .attorney-main-content)"
+
 paul_weiss:
   selectors:
     name: ".pageTitle h1"
@@ -29,3 +39,10 @@ simpson_thacher:
       strip_prefix: "tel:"
     education: "div.bio-left-column-section:has(> .bio-left-column-section-headline:-soup-contains('Education')) .bio-left-column-section-item"
     admissions: "div.bio-left-column-section:has(> .bio-left-column-section-headline:-soup-contains('Admissions')) .bio-left-column-section-item"
+quinn_emanuel:
+  selectors:
+    biography: "#pane-A .atn-details"
+
+sullivan_cromwell:
+  selectors:
+    biography: "#main_bio_container .main-bio-version"
