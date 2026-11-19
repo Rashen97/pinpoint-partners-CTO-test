@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="api-base" content="">
+  <meta name="description" content="Search Corporate and M&A partner rosters by firm, office and practice.">
+  <title>Partner Directory | Pinpoint Partners</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="./styles.css">
+  <script type="module" src="./app.js"></script>
+</head>
+<body>
+  <header class="topbar">
+    <div class="shell topbar-inner">
+      <a href="./" class="brand" aria-label="Pinpoint Partners home">
+        <span class="brand-mark" aria-hidden="true"></span>
+        <span>PINPOINT<small>PARTNERS</small></span>
+      </a>
+      <nav aria-label="Workspace">
+        <button id="directory-tab" aria-current="page">Directory</button>
+        <button id="saved-tab">Saved partners <span id="saved-count">0</span></button>
+        <button id="changes-tab" aria-controls="recent-changes">Recent changes</button>
+      </nav>
+      <span class="workspace">Legal recruitment</span>
+    </div>
+  </header>
+  <main>
+    <section class="hero" aria-labelledby="page-title">
+      <div class="shell hero-inner">
+        <p class="eyebrow"><span></span> Legal market intelligence</p>
+        <h1 id="page-title">Partner directory<span>.</span></h1>
+        <p>Search Corporate and M&amp;A partners by firm, office and practice.</p>
+      </div>
+    </section>
+    <section id="directory" class="shell directory" aria-labelledby="results-title">
+      <form class="filters" id="filters" role="search">
+        <label class="search-field">Search partners
+          <span class="search-wrap"><span class="search-icon" aria-hidden="true"></span><input id="search" type="search" placeholder="Name, firm or practice"></span>
+        </label>
+        <label>Firm<select id="firm"><option value="">All firms</option></select></label>
+        <label>Office<select id="office"><option value="">All offices</option></select></label>
+        <label>Practice<select id="practice"><option value="">All practices</option></select></label>
+        <button class="clear" type="reset">Clear filters</button>
+      </form>
+      <div class="results-header">
+        <div>
+          <h2 id="results-title">All partners</h2>
+          <p id="result-status" role="status">Loading partners…</p>
+        </div>
+        <label class="sort">Sort by <select id="sort"><option value="asc">Name (A–Z)</option><option value="desc">Name (Z–A)</option></select></label>
+      </div>
+      <p id="data-status" class="data-status" hidden></p>
+      <div class="table-wrap" id="table-wrap" hidden>
+        <table>
+          <thead><tr><th scope="col">Partner</th><th scope="col">Firm</th><th scope="col">Office</th><th scope="col">Practice</th><th scope="col" class="save-column"><span class="sr-only">Save partner</span></th></tr></thead>
+          <tbody id="rows"></tbody>
+        </table>
+      </div>
+      <div id="empty" class="empty" hidden></div>
+      <div class="pagination" id="pagination" hidden>
+        <span id="range"></span>
+        <div>
+          <button id="previous">Previous</button>
+          <button id="next">Next</button>
+        </div>
+      </div>
+    </section>
+    <section id="recent-changes" class="shell directory" aria-labelledby="changes-title" hidden>
+      <div class="changes-card">
+        <h2 id="changes-title" tabindex="-1">Recent changes</h2>
+        <p id="changes-status" role="status"></p>
+        <ul id="changes-list"></ul>
+      </div>
+    </section>
+  </main>
+  <footer class="shell">Pinpoint Partners <span>Legal market intelligence</span></footer>
+  <dialog id="profile" aria-labelledby="profile-title">
+    <div class="profile-top"><span>Partner profile</span><form method="dialog"><button aria-label="Close profile" autofocus>×</button></form></div>
+    <div id="profile-content"></div>
+  </dialog>
+  <template id="bookmark-icon"><span class="bookmark-icon" aria-hidden="true"></span></template>
+</body>
+</html>
