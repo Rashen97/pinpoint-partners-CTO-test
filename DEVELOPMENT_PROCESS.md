@@ -20,10 +20,10 @@ The intended flow is:
 firm directories
     -> PartnerEntryInfo records
     -> validation and deduplication
-    -> roster snapshots in mock_database/
-    -> profile enrichment
+    -> roster database
+    -> separate profile-enrichment script
     -> PartnerProfileInfo records
-    -> profile snapshot in mock_database/
+    -> enriched partner database
 ```
 
 The directory connector remains the authority for roster membership. The profile connector enriches a roster entry but does not decide whether the person is currently listed. If a profile page fails or returns 404, that should be recorded as an enrichment failure rather than interpreted as a departure.
@@ -53,7 +53,7 @@ firm-specific directory connectors
 
 ### Keep `refresh.py` as the single pipeline entry point
 
-I kept dataset-wide profile enrichment in `refresh.py`, alongside extraction, normalization, validation, and JSON snapshot storage. The shared enrichment implementation belongs in an internal pipeline module, while `refresh.py` decides when it runs and how its result affects the overall refresh status.
+I clarified that the dataset-wide profile enrichment should not become a second user-facing command. It is a stage within the overall refresh workflow and should therefore be orchestrated by `refresh.py`, alongside extraction, normalization, validation, and database loading. The shared enrichment implementation belongs in an internal pipeline module, while `refresh.py` decides when it runs and how its result affects the overall refresh status.
 
 This keeps one operational command for a scheduled refresh and avoids making a user manually export directory JSON and pass it into another script. A directory-only option can remain as a development and debugging control, but the normal refresh path should continue from validated `PartnerEntryInfo` records into profile enrichment automatically. Profile failures are reported separately and must not invalidate or erase the successfully extracted roster.
 
@@ -82,11 +82,11 @@ pipeline/
 
 This does not make profile enrichment a separate command. It remains an internal stage orchestrated by `refresh.py`; the folder only gives that stage a clear implementation boundary.
 
-### Store pipeline outputs in a mock database
+### Use a local JSON folder as a temporary database
 
-I decided to make the pipeline stages inspectable by storing their outputs as JSON in the root-level `mock_database/` folder. The current prototype runs directory extraction and profile enrichment using these snapshots.
+Before introducing a real database, I decided to make the pipeline stages visible and inspectable by storing their outputs as JSON in a root-level `mock_database/` folder alongside `pipeline/`. This provides a simple stand-in for persistence while the extraction and transformation contracts are still evolving.
 
-The first persisted stage is the connector extraction. This captures what the connector returned before shared normalization and deduplication, which makes source and parser problems easier to inspect. The second stage saves verified per-firm rosters and the combined `PartnerEntryInfo` dataset in `partner_entries/`. Enrichment reloads the combined roster and saves the current run's profiles and failures together in `partner_profiles/all_profiles.json`.
+The first persisted stage is the connector extraction. This captures what the connector returned before shared normalization and deduplication, which makes source and parser problems easier to inspect. The second persisted stage is the unified `PartnerEntryInfo` dataset produced after shared transformation.
 
 The two outputs have different safety rules. A connector extraction may be saved for diagnostics even when its coverage is incomplete. The unified roster file represents the latest good dataset and must only be replaced after extraction completes and the Corporate/M&A scope is verified. This preserves the earlier rule that a blocked, partial, or malformed refresh must not look like a departure.
 
@@ -121,11 +121,11 @@ The connectors remain sequential for predictable load, simpler source debugging,
 
 I identified that the unified dataset needs an internal identifier for each partner entry. Firm-provided IDs are not available or reliable across every source, and names are not safe identifiers. The initial source identity is therefore the combination of `firm_key` and canonical `profile_url`, which is already the pipeline's deduplication key.
 
-The internal field should be called `partner_entry_id` rather than implying that it is a permanent global identity for the human being. A deterministic UUID can be generated from a fixed application namespace plus `firm_key` and the canonical profile URL. That produces the same ID on repeated refreshes and avoids exposing the URL as the identifier.
+The internal field should be called `partner_entry_id` rather than implying that it is a permanent global identity for the human being. A deterministic UUID can be generated from a fixed application namespace plus `firm_key` and the canonical profile URL. That produces the same ID on repeated refreshes without requiring an auto-incrementing database and avoids exposing the URL as the identifier.
 
 I considered generating this ID during profile enrichment, but decided that point is too late. The ID belongs to the unified `PartnerEntryInfo` contract and should exist before the dataset is saved to `all_partners.json`. It is therefore generated in the shared normalization/transformation stage after the profile URL has been canonicalized. Profile enrichment consumes the ID and copies it into `PartnerProfileInfo`, giving the profile record a stable reference back to its roster entry.
 
-This ID remains scoped to a firm's roster entry. If a person changes firms, the new firm entry should initially receive a new ID. The system must not merge people across firms by name alone. A later identity-resolution layer could introduce a separate `person_id` supported by stronger evidence and source aliases. A changed profile URL can generate a new entry ID. Preserving identity across URL changes would require retaining old source URLs or firm source IDs as aliases.
+This ID remains scoped to a firm's roster entry. If a person changes firms, the new firm entry should initially receive a new ID. The system must not merge people across firms by name alone. A later identity-resolution layer could introduce a separate `person_id`, supported by stronger evidence and a table of source aliases. Similarly, if a firm changes a profile URL, the first implementation may generate a new entry ID; preserving identity across URL changes would require retaining old source URLs or firm source IDs as aliases.
 
 ### Keep one refresh command and make limited runs easy to reproduce
 
@@ -133,9 +133,27 @@ I removed the repository-root wrapper so that `pipeline/refresh.py` is the singl
 
 I wanted to exercise the entire flow across the enabled firms without waiting for every profile request. The default run attempts profile enrichment for the whole current combined roster. `--profile-limit 10` still extracts the full directories and caps enrichment at ten entries across the combined roster. `--directory-only` exercises the directory and storage stages. A targeted `--firm` run is useful for diagnosing one directory connector and stops before combined enrichment.
 
+### Move stage storage from JSON to SQLite
+
+I used the JSON snapshots to inspect the intermediate datasets before settling on the database structure. Once the shapes were clear, I moved the old snapshots into `mock_database/` and switched refreshes to `database/partners.db`. SQLite fits the local prototype because Python can create and open the database file without a separate service. The schema belongs in versioned SQL under `database/migrations/`. The committed migrations let a new checkout recreate the tables, and the generated database stays local.
+
+I kept responsibility for writes in `pipeline/storage/` because the ingestion pipeline knows the completeness and scope of each refresh. When I add a backend, its queries can live with the API code and read the same schema. The frontend will get its data through that API. If the pipeline and backend eventually run on separate machines, the same ownership split can carry over to a shared server database.
+
+### Name tables after the stage and the data they hold
+
+I wanted to be able to open SQLite and see what each stage produced. `scraped_raw_<firm>` stores the connector's output before shared normalization and deduplication. The connector may already have merged overlapping source results by that point. `partner_entries_<firm>` stores the latest complete, verified roster for that firm. `partner_entries_all` publishes the combined roster after every enabled firm succeeds. Keeping a firm-level copy lets a successful firm save its work even if the combined refresh is held back. Profile enrichment then reads the current combined roster and writes to `partner_profiles_all`, with `partner_entry_id` linking the two tables.
+
+I asked where each table was created and removed the temporary rename statements once the final names were decided. The migrations create the shared tables directly. The storage layer creates a per-firm table when that firm's stage is first written. The active `scraped_raw_runs` table holds the latest extraction metadata per firm, including page counts, coverage and warnings. An earlier `refresh_runs` design would have stored a history of attempts. Partner fields and biographies live in the stage tables, and recent profile failures have their own diagnostic table.
+
+### Make repeated profile loads and roster removals safe
+
+I expect this pipeline to run on a schedule eventually, so I wanted repeated runs to add new profiles, update changed profiles, and leave identical profiles alone. Storage uses `partner_entry_id` to find the row and a hash of the extracted profile fields to detect a content change. This allows changes to fields such as education, admissions and languages to trigger an update. After fetching and parsing the profile, storage skips an identical row and rejects incoming content older than the stored version. A limited enrichment run preserves previously stored profiles for current roster entries.
+
+I chose to retain missing roster entries and their last saved profiles. When a complete, verified combined refresh omits an entry for a refreshed firm, the database sets `no_longer_listed_at`. The directory and profile enrichment can use entries where that value is empty. If the same entry returns, the refresh clears the timestamp. A failed scrape, partial roster or profile error provides insufficient evidence to change listing status. An omission supports calling someone “no longer listed”.
+
 ### Check directory coverage and enrichment separately
 
-One Paul Weiss refresh yielded 216 unique partners across the Corporate and M&A directory filters. A limited enrichment run produced ten profiles. I tracked those counts separately because roster coverage and enrichment progress measure different stages.
+When the full refresh stopped, I checked SQLite and the live connector results separately. The saved Paul Weiss data contained 216 unique partners across the Corporate and M&A directory filters. The ten saved profiles came from a limited enrichment run, so the profile count measured how far enrichment had gone and the roster count measured directory coverage.
 
 Simpson Thacher's legacy endpoint failed during the combined refresh. I kept the last verified combined roster and left the replacement source pending verification of both practice filters and pagination. I also tested the disabled connectors directly. Sullivan & Cromwell returned 94 M&A partners and still lacked verified broad Corporate coverage. Kirkland returned HTTP 500, and Wachtell returned HTTP 403. These checks showed why connector availability, verified scope and profile coverage each need their own status.
 
@@ -159,7 +177,7 @@ I recorded what I discovered in `pipeline/firms.yaml`, including details such as
 
 ## Designing for continued use
 
-After identifying the data sources, I began designing the codebase around a repeatable refresh workflow. For long-term use, the workflow would need to scrape, clean, validate, and publish the refreshed data on a schedule.
+After identifying the data sources, I began designing the codebase structure. I did not want to treat the project as a collection of one-off scraping scripts. If this application were developed for long-term use, the process of scraping, cleaning, validating, and uploading the data to a database would need to run repeatedly on a schedule.
 
 In a production system, I would expect that workflow to be scheduled and monitored through an orchestration tool. Implementing a full orchestration platform was not the best use of the six-hour assessment window, so I deliberately left that out. However, I structured the pipeline so that orchestration could be added later without requiring the scraping and processing code to be reorganised.
 

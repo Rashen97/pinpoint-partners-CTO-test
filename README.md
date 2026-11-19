@@ -1,9 +1,8 @@
 # Pinpoint partner directory
 
 The refresh pipeline is organized as `connectors -> processing -> storage`.
-The current prototype runs the refresh pipeline with a local JSON mock
-database. Every connector returns `PartnerEntryInfo` records while retaining
-native firm role, office, and practice labels.
+Every connector returns the same `TargetPartner` model while retaining native
+firm role, office, and practice labels.
 
 ```powershell
 python -m pip install -r requirements.txt
@@ -14,8 +13,9 @@ python -m pipeline.refresh --firm kirkland
 python -m unittest discover -s pipeline/tests -v
 ```
 
-Refresh commands print JSON and save pipeline outputs in `mock_database/`.
-See the [mock database guide](mock_database/README.md) for the snapshot layout.
+Refresh commands print normalized JSON and save pipeline stages in
+`database/partners.db`. The refresh applies schema migrations automatically.
+See the [SQLite table guide](database/README.md) for the stage names.
 
 By default, `refresh.py` continues from directory extraction into profile
 enrichment across the unified `PartnerEntryInfo` dataset:
@@ -39,9 +39,9 @@ profile connector reads firm-specific selector mappings from
 `pipeline/profile_enrichment/profile_sources.yaml`; a separate profile connector file is not
 created for every firm.
 
-Profile enrichment begins after every selected directory connector produces
-a complete, verified roster. It reads `mock_database/partner_entries/all_partners.json`
-and writes profiles and enrichment failures to `mock_database/partner_profiles/all_profiles.json`.
+Profile enrichment begins only after every selected directory connector has
+finished and `partner_entries_all` has been updated. It reads that table as its
+input and saves enriched profiles in `partner_profiles_all`.
 
 ## Connector status
 

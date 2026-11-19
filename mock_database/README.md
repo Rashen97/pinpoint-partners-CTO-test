@@ -1,6 +1,7 @@
 # Local JSON database
 
-Pipeline refreshes store their outputs as JSON snapshots in this folder.
+This folder contains snapshots from the earlier JSON storage workflow.
+Current refreshes write to SQLite. See [the SQLite table guide](../database/README.md).
 
 Collections:
 
@@ -14,4 +15,4 @@ an incomplete or unverified refresh must not replace the last good dataset.
 The combined `partner_entries/all_partners.json` file is replaced only when
 every connector selected by the default all-firm refresh succeeds.
 Profile enrichment reloads that combined file as its input contract and writes
-`partner_profiles/all_profiles.json`, including any enrichment failures.
+`partner_profiles/all_profiles.json`.
