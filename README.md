@@ -62,8 +62,6 @@ The remaining firms are documented in ASSESSMENT_REVIEW.md. I have not
 claimed complete coverage where source access, practice mapping or
 pagination could not be reliably verified.
 
-## Production roadmap
-
 ## Final integration testing
 
 On 19 November 2026, I executed the full refresh pipeline and
@@ -113,6 +111,7 @@ Manual frontend testing confirmed:
 Profile enrichment coverage refers to the collected roster,
 not complete coverage of all 15 target firms.
 
+## Production roadmap
 
 ### Weekly automated refresh
 
@@ -163,9 +162,33 @@ reliable, source-backed recruitment directory within the assessment scope.
 - [DEVELOPMENT_PROCESS.md](DEVELOPMENT_PROCESS.md) explains how I approached the brief, the alternatives I considered, and the evidence that changed my decisions.
 - [ASSESSMENT_REVIEW.md](ASSESSMENT_REVIEW.md) maps the implementation to the brief, records coverage and blockers for all 15 firms, and explains what I would change first for weekly operation at production scale.
 
+- [CODEX.md](CODEX.md) provides project-specific technical context, implementation conventions and guidance for continued development.
+
+- [Database guide](database/README.md) explains the SQLite database structure, migrations and responsibilities of the storage layer.
+
+- [Frontend guide](frontend/README.md) explains the recruiter interface, API integration and frontend configuration.
+
+
 ## Run the project locally
 
-Use Python 3.10 or later. Run these commands from the repository root in PowerShell.
+### Prerequisites
+
+- Python 3.10 or later
+- Git
+- Internet access for collecting data from law firm websites
+- A modern web browser
+
+The following instructions use Windows PowerShell.
+
+### 0. Clone the repository
+
+```powershell
+git clone https://github.com/Rashen97/pinpoint-partners-CTO-test.git
+cd pinpoint-partners-CTO-test
+```
+
+Alternatively, download the repository as a ZIP file from GitHub,
+extract it, and open a terminal in the extracted project directory.
 
 ### 1. Set up the environment
 
@@ -176,32 +199,30 @@ python -m venv .venv
 
 ### 2. Populate SQLite
 
-The refresh needs network access to the enabled firms' websites. It creates
-`database/partners.db`, applies migrations, and updates the combined roster.
+Run the full data collection and profile enrichment pipeline:
 
-Each firm is validated independently, allowing successful sources to update
-even when another source fails.
+```powershell
+.\.venv\Scripts\python.exe -m pipeline.refresh
+```
 
-The publication policy distinguishes between four outcomes:
+The full refresh makes requests to the enabled firms' directories
+and individual partner profiles. Execution time depends on network
+conditions, source availability and request pacing.
 
-- **Verified coverage:** Updates the roster and records partners who are no
-  longer listed.
-- **Expected partial coverage:** Publishes observations from an explicitly
-  approved limited scope, without inferring removals. Gibson Dunn currently
-  operates under this policy.
-- **Unexpected partial coverage:** Publishes eligible observations while
-  preserving previously verified roster entries and returns a nonzero exit
-  code to signal that investigation is required.
-- **Failed or incomplete extraction:** Rejects the new roster and preserves
-  previously published data.
+For a quicker functional demonstration, limit profile enrichment
+to ten eligible profiles:
 
-Profile enrichment is separate from roster extraction. A failed profile
-request does not change a partner's listing status. Profiles become visible
-in the directory after enrichment is successfully saved.
+```powershell
+.\.venv\Scripts\python.exe -m pipeline.refresh --profile-limit 10
+```
 
-This policy prevents incomplete source responses from being interpreted as
-partner departures and provides a failure signal that a future scheduled
-orchestration service can monitor.
+The limited refresh still processes the enabled firm directories
+but restricts the number of individual profiles enriched.
+
+A nonzero exit code may indicate source or profile enrichment
+failures. Successfully published data remains available. Review
+the refresh output before proceeding.
+
 
 ### 3. Start the API
 
