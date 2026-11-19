@@ -1,88 +1,63 @@
 # Pinpoint partner directory
 
-See the [frontend guide](frontend/README.md) to preview the recruiter directory
-or connect it to the FastAPI backend.
+Pinpoint’s recruiters need to prepare for calls with individual partners and keep up with changes across law firms. This project gives them a searchable directory of Corporate and M&A partners, with filters for firm, office, and practice. Recruiters can save a shortlist in their browser, read a source-backed profile, and open an editable Google search for recent deals, press coverage, or firm announcements.
 
-## Run the backend
+The directory is the starting point because recruiters can scan a market segment and open a profile in the same workflow. Recent changes shows recorded removals and includes a labelled fictional preview of additions and removals. The prototype leaves AI chat, shared shortlists, and cross-firm move detection for later.
 
-From the repository root:
+The pipeline uses Python connectors to collect and validate firm rosters, then enriches the partner profiles. SQLite keeps both stages in a single local database. FastAPI exposes the enriched directory and profile details through a typed API, and the browser interface runs without a frontend build step.
 
-```powershell
-python -m pip install -r requirements.txt
-python -m uvicorn backend.app.main:app --host 127.0.0.1 --port 8001
-```
+## Assessment documentation
 
-Open the [API docs](http://127.0.0.1:8001/docs) to try the two directory routes.
-The backend reads `database/partners.db` in read-only mode. Both endpoints
-serve active partners with saved enrichment in `partner_profiles_all`.
-They join to `partner_entries_all` for roster identity and listing status.
-Run the full refresh below to populate profiles. An initialized database
-without enriched profiles returns an empty list. A missing or unreadable
-database returns HTTP 503. Coverage counts firms in the verified roster
-regardless of enrichment progress. Recent changes show retained removals.
+- [DEVELOPMENT_PROCESS.md](DEVELOPMENT_PROCESS.md) explains how I approached the brief, the alternatives I considered, and the evidence that changed my decisions.
+- [ASSESSMENT_REVIEW.md](ASSESSMENT_REVIEW.md) maps the implementation to the brief, records coverage and blockers for all 15 firms, and explains what I would change first for weekly operation at production scale.
 
-The frontend served on port 8080 connects to
-`http://127.0.0.1:8001/api` by default.
+## Run the project locally
 
-The refresh pipeline is organized as `connectors -> processing -> storage`.
-Every connector returns the same `TargetPartner` model while retaining native
-firm role, office, and practice labels.
+Use Python 3.10 or later. Run these commands from the repository root in PowerShell.
+
+### 1. Set up the environment
 
 ```powershell
-python -m pip install -r requirements.txt
-python -m pipeline.refresh --firm paul_weiss
-python -m pipeline.refresh --firm simpson_thacher
-python -m pipeline.refresh --firm sullivan_cromwell --include-unverified-scope
-python -m pipeline.refresh --firm kirkland
-python -m unittest discover -s pipeline/tests -v
+python -m venv .venv
+.\.venv\Scripts\python.exe -m pip install -r requirements.txt
 ```
 
-Refresh commands print normalized JSON and save pipeline stages in
-`database/partners.db`. The refresh applies schema migrations automatically.
-See the [SQLite table guide](database/README.md) for the stage names.
-
-By default, `refresh.py` continues from directory extraction into profile
-enrichment across the unified `PartnerEntryInfo` dataset:
+### 2. Populate SQLite
 
 ```powershell
-python -m pipeline.refresh
+.\.venv\Scripts\python.exe -m pipeline.refresh
 ```
 
-The default run refreshes every currently complete, verified connector. Use
-`--firm` only for targeted development or diagnosis.
+The refresh needs network access to the enabled firms’ sites. It creates `database/partners.db`, applies migrations, and updates the combined roster for firms that pass validation. It retains the last verified entries for firms that fail or return partial results. Those issues appear in the run summary and cause a nonzero exit code even when other firms update successfully. Profiles appear in the directory after enrichment is saved.
 
-For development, limit enrichment or stop after directory extraction:
+For a quicker run from a clean checkout, use `--profile-limit 10`. This runs every enabled firm’s directory refresh and attempts up to ten profiles **across the firms verified in that run**.
+
+### 3. Start the API
 
 ```powershell
-python -m pipeline.refresh --profile-limit 10
-python -m pipeline.refresh --directory-only
+.\.venv\Scripts\python.exe -m uvicorn backend.app.main:app --host 127.0.0.1 --port 8001
 ```
 
-The internal enrichment stage iterates the unified dataset. One shared HTML
-profile connector reads firm-specific selector mappings from
-`pipeline/profile_enrichment/profile_sources.yaml`; a separate profile connector file is not
-created for every firm.
+Keep this terminal running. The [API docs](http://127.0.0.1:8001/docs) expose the directory and profile endpoints. The API reads SQLite in read-only mode.
 
-Profile enrichment begins only after every selected directory connector has
-finished and `partner_entries_all` has been updated. It reads that table as its
-input and saves enriched profiles in `partner_profiles_all`.
+### 4. Serve the frontend
 
-## Connector status
+Open a second PowerShell terminal at the repository root.
 
-| Firm | Current status | Coverage |
-|---|---|---|
-| Paul Weiss | Live verified | Corporate and Mergers and Acquisitions |
-| Cravath | Enabled | Verified Corporate and Mergers and Acquisitions partner searches |
-| Quinn Emanuel | Enabled | Verified Mergers & Acquisitions Litigation practice team, using the firm's native scope |
-| Milbank | Enabled | Corporate, M&A, Distressed M&A, and explicit regional filters |
-| Simpson Thacher | Disabled after legacy endpoint returned HTTP 404 | Corporate and Mergers and Acquisitions need re-verification on the replacement source |
-| Sullivan & Cromwell | Enabled | General Practice (the firm's Corporate group) and both explicit M&A filters |
-| Wachtell Lipton | Implemented, runner blocked by HTTP 403 | Corporate rule; no general M&A option published |
-| Kirkland & Ellis | Implemented against captured JSON, source currently failing | Corporate/M&A filters unverified |
+```powershell
+.\.venv\Scripts\python.exe -m http.server 8080 --bind 127.0.0.1 --directory frontend
+```
 
-Counts are observations from a refresh, not constants. A partial or blocked
-connector must not be loaded as a complete roster.
+Open the [partner directory](http://127.0.0.1:8080/). It connects to the API on port 8001 by default. Search for a partner, open a profile, or try Recent changes.
 
-The live Kirkland endpoint currently returns an error page to a direct request.
-The connector checks for JSON and fails rather than interpreting that response
-as an empty directory.
+For a standalone preview with fictional records, set the `api-base` meta tag in `frontend/index.html` to an empty string and run only the frontend server. See the [frontend guide](frontend/README.md) for the API contract and configuration details.
+
+## Pipeline checks
+
+```powershell
+.\.venv\Scripts\python.exe -m unittest discover -s pipeline/tests -v
+.\.venv\Scripts\python.exe -m pipeline.refresh --directory-only
+.\.venv\Scripts\python.exe -m pipeline.refresh --firm paul_weiss
+```
+
+Use `--directory-only` to refresh the combined roster without profile enrichment. Use `--firm` to diagnose a single directory connector. Targeted runs stop before combined publication and enrichment. See the [SQLite table guide](database/README.md) for what each stage stores.

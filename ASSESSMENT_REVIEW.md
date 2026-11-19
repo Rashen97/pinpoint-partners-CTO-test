@@ -1,6 +1,20 @@
-# Assessment scope
+# Assessment review
 
 The target is every Corporate and M&A partner across all offices at the 15 firms named in the brief. This ledger records what I could verify during the assessment. It reflects the source review and local runs as of 19 November 2026. [Source configuration](pipeline/firms.yaml)
+
+## Assessment criteria
+
+I used these criteria to decide what the prototype needed to demonstrate and what I would validate before relying on it in production.
+
+| Criterion | What works today | What I would improve for regular use |
+| --- | --- | --- |
+| **Recruiter value** | Recruiters can find a partner, save a shortlist, read a firm-sourced profile, and open a focused web search. Recent changes shows when a partner is no longer listed and includes labelled fictional examples. | Show when a partner is first seen after a firm’s initial verified list. Report a move between firms when there is supporting evidence, such as a hiring announcement. |
+| **Coverage and data quality** | The default refresh covers five of the 15 firms. The table below explains the status of each firm. The system tracks which firms’ partner lists are verified and how many profiles have been collected. | For each new firm, check that the source covers the relevant partners, practices, offices, and pages. Show when each firm was last checked and investigate unexpected drops before publishing an update. |
+| **Engineering quality** | The project collects, checks, and saves data before displaying it. The directory can read the saved records, and the refresh process controls changes to them. | Keep a history of each firm’s updates so the team can trace a change back to its source. Test what happens when a site changes, returns incomplete results, or becomes unavailable. |
+| **Weekly operation and scale** | One command refreshes firm directories and collects profile details. It is designed to run as a scheduled job. If one firm fails, the others can update while the failed firm keeps its last verified list. | Run the command weekly using a tool such as Google Cloud Composer. Add alerts and show when each firm was last verified. For 50 firms and beyond, build a tool that takes firm names and optional homepages, finds candidate directories, and checks sample results. A reviewer would confirm coverage before enabling each source. [Google Cloud scheduling guide](https://docs.cloud.google.com/composer/docs/composer-3/schedule-and-trigger-dags) |
+| **Prioritisation and scope** | I focused on getting firm data onto the recruiter’s screen and documenting the coverage gaps. I deferred AI chat, shared shortlists, and automated move detection. | Make weekly updates reliable and show how current the data is. Use recruiter feedback to decide whether broader coverage or better market-change tracking should come next. |
+| **Responsible collection** | The project records where professional profile details came from and when they were checked. The refresh visits firm directories one at a time and only publishes results that pass its coverage checks. | Check each site’s access rules, identify and pace requests, and stop when access is persistently blocked. Decide which fields to keep, for how long, and how to correct records. |
+| **Communication and reproducibility** | The README explains how to run the project and recognise sample data. The development log explains the decisions, and this review records the coverage evidence and gaps. | Document how to add a firm, handle a failed update, and check whether a list is current. Include the actual time spent in the assessment submission. [README](README.md) · [Development process](DEVELOPMENT_PROCESS.md) |
 
 ## Coverage by firm
 
@@ -24,6 +38,6 @@ The target is every Corporate and M&A partner across all offices at the 15 firms
 
 ## How coverage affects the product
 
-The default refresh enables Paul Weiss, Cravath, Quinn Emanuel, Milbank, and Sullivan & Cromwell. The current pipeline updates the combined roster after every enabled source passes extraction and scope checks. The recruiter directory displays active profiles after enrichment has been saved, so roster and profile counts measure different stages.
+The default refresh enables Paul Weiss, Cravath, Quinn Emanuel, Milbank, and Sullivan & Cromwell. The pipeline updates the combined roster for firms that pass extraction and scope checks. The recruiter directory displays active profiles after enrichment has been saved, so roster and profile counts measure different stages.
 
-A blocked, broken, or partial response leaves listing status intact. At higher firm counts, I would publish verified snapshots independently per firm, retain the last good snapshot when a source fails, and show its freshness in the directory.
+A blocked, broken, or partial response leaves that firm’s listing status intact. The refresh reports the issue even when other firms update successfully. In production I would show each firm’s last verified update in the directory.

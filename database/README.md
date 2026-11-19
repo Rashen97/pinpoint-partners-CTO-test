@@ -12,7 +12,7 @@ To initialize the schema without scraping, run this from the repository root:
 | `scraped_raw_<firm_key>` | Latest connector records before normalization and deduplication |
 | `scraped_raw_runs` | Latest extraction status, coverage, counts, and warnings per firm |
 | `partner_entries_<firm_key>` | Latest complete, scope-verified roster for one firm |
-| `partner_entries_all` | Combined roster and retained removals, updated after every enabled firm succeeds in a full refresh |
+| `partner_entries_all` | Combined roster and retained removals, updated for each firm verified during a full refresh |
 | `partner_profiles_all` | Enriched profiles keyed by `partner_entry_id`; untouched current profiles survive limited or partial enrichment |
 | `partner_profile_failures_all` | Failures from the latest enrichment stage |
 
@@ -24,4 +24,5 @@ Filter on `no_longer_listed_at IS NULL` for the current combined roster.
 When a complete, verified combined refresh omits an entry for one of the
 refreshed firms, the pipeline sets this timestamp and retains the stored profile.
 If the entry reappears, the pipeline clears the timestamp. Profile enrichment
-reads current entries only.
+reads current entries for firms verified in that run. A failed or partial
+firm keeps its last verified roster and saved profiles.

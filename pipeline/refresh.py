@@ -70,7 +70,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--profile-limit",
         type=int,
-        help="Only enrich the first N profiles in the combined roster",
+        help="Only enrich the first N profiles across firms verified in this run",
     )
     return parser.parse_args()
 
@@ -81,8 +81,8 @@ def refresh_firm(
     args: argparse.Namespace,
     database: SQLiteDatabase,
 ) -> tuple[dict[str, Any], int, ExtractionResult | None]:
-    connector = build_connector(firm_key, config)
     try:
+        connector = build_connector(firm_key, config)
         result = connector.extract()
     except (ConnectorError, NotImplementedError) as exc:
         return (
@@ -168,7 +168,7 @@ def main() -> int:
         return exit_codes[0]
 
     combined_path = None
-    if len(verified_results) == len(firm_keys):
+    if verified_results:
         combined_path = database.save_all_partner_entries(verified_results)
 
     profile_output: dict[str, Any]
@@ -176,7 +176,7 @@ def main() -> int:
     if combined_path is None:
         profile_output = {
             "status": "skipped",
-            "reason": "The combined partner-entry dataset was not replaced",
+            "reason": "No firm produced a complete, verified roster",
             "source": None,
             "database": None,
         }
@@ -188,7 +188,11 @@ def main() -> int:
             "database": None,
         }
     else:
-        unified_entries = database.load_all_partner_entries()
+        verified_firm_keys = {result.firm_key for result in verified_results}
+        unified_entries = [
+            entry for entry in database.load_all_partner_entries()
+            if entry.firm_key in verified_firm_keys
+        ]
         profile_connector = ConfiguredHtmlProfileConnector(load_profile_sources())
         enrichment = enrich_entries(
             unified_entries,
@@ -234,8 +238,11 @@ def main() -> int:
         "firms": firm_payloads,
     }
     print(json.dumps(output, indent=2, ensure_ascii=False))
-    if combined_path is None:
-        print("Combined dataset was not replaced.", file=sys.stderr)
+    if len(verified_results) != len(firm_keys):
+        if combined_path is None:
+            print("Combined dataset was not replaced.", file=sys.stderr)
+        else:
+            print("Updated verified firms and kept prior records for the other firms.", file=sys.stderr)
         for firm_key, payload in firm_payloads.items():
             if payload["status"] != "complete":
                 details = payload.get("error") or "; ".join(payload.get("warnings", []))
