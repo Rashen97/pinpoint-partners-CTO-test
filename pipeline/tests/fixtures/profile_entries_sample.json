@@ -1,0 +1,22 @@
+[
+  {
+    "firm_key": "paul_weiss",
+    "firm_name": "Paul, Weiss, Rifkind, Wharton & Garrison",
+    "name": "Matthew W. Abbott",
+    "role": "Partner",
+    "offices": ["New York"],
+    "practices": ["Corporate", "Mergers and Acquisitions"],
+    "profile_url": "https://www.paulweiss.com/professionals/partners-and-counsel/matthew-w-abbott",
+    "source_url": "https://www.paulweiss.com/professionals"
+  },
+  {
+    "firm_key": "simpson_thacher",
+    "firm_name": "Simpson Thacher & Bartlett",
+    "name": "Andrew Alin",
+    "role": "Partner",
+    "offices": ["New York"],
+    "practices": ["Corporate", "Mergers and Acquisitions"],
+    "profile_url": "https://www.stblaw.com/our-team/partners/andrew--alin",
+    "source_url": "https://www.stblaw.com/our-team"
+  }
+]

@@ -1,0 +1,31 @@
+paul_weiss:
+  selectors:
+    name: ".pageTitle h1"
+    role:
+      selector: "meta.swiftype[name='PositionTitle']"
+      attribute: content
+    biography:
+      selector: "meta[property='og:description']"
+      attribute: content
+    offices: ".location-block .detail-item"
+    practices: ".practices-block .detail-item"
+    phone_numbers:
+      selector: ".contact-block a[href^='tel:']"
+      attribute: href
+      strip_prefix: "tel:"
+    education: ".education-block .detail-item"
+    admissions: ".admissions-block .detail-item"
+    languages: ".languages-block .detail-item"
+
+simpson_thacher:
+  selectors:
+    name: ".hero-area-name h1"
+    role: ".hero-area-title"
+    biography: ".bio-content"
+    practices: "#bioRightColPracticeFocus .bio-right-tagged-item"
+    phone_numbers:
+      selector: ".hero-area-phone a[href^='tel:']"
+      attribute: href
+      strip_prefix: "tel:"
+    education: "div.bio-left-column-section:has(> .bio-left-column-section-headline:-soup-contains('Education')) .bio-left-column-section-item"
+    admissions: "div.bio-left-column-section:has(> .bio-left-column-section-headline:-soup-contains('Admissions')) .bio-left-column-section-item"

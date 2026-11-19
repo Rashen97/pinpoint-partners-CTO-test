@@ -1,0 +1,181 @@
+# Pinpoint Partners assessment — source inventory for all 15 firms.
+# directory_url is the human-facing directory (or practice team view).
+# filtered_url is a known entry point, not proof of a full roster.
+# results_url is a captured network endpoint. Null means not captured.
+# type describes the results endpoint response, not the bio page.
+# iterSuffix values are examples from DevTools, not full-roster filters.
+# Do not publish a roster until role, practice, all offices, and pagination are verified.
+
+kirkland:
+  refresh_enabled: false
+  name: "Kirkland & Ellis"
+  directory_url: "https://www.kirkland.com/lawyers"
+  results_url: "https://www.kirkland.com/api/sitecore/ProfessionalsApi/Lawyers"
+  method: GET
+  type: json
+  iterSuffix: "?letter=[X]"
+  iteration: alphabet
+  role_field: Position
+  accepted_roles:
+    - Partner
+  scope_verified: false
+  notes: "Captured letter examples only. Confirm GET, Corporate/M&A filters, and pagination."
+
+wachtell_lipton:
+  refresh_enabled: false
+  name: "Wachtell, Lipton, Rosen & Katz"
+  directory_url: "https://www.wlrk.com/attorneys/"
+  results_url: "https://www.wlrk.com/attorneys/"
+  method: GET
+  type: html
+  query_params:
+    asf_l: "View All"
+    asf_pa: corporate
+    asf_p: partner
+  minimum_expected_records: 5
+  notes: "Corporate is the documented scope rule because no general M&A option is published. Direct automated requests currently return 403."
+
+quinn_emanuel:
+  name: "Quinn Emanuel Urquhart & Sullivan"
+  directory_url: "https://www.quinnemanuel.com/attorneys"
+  results_url: "https://www.quinnemanuel.com/Umbraco/surface/AttorneysListSurface/GetAttorneyListByFilter"
+  method: POST
+  type: html
+  iterSuffix: "?byCountry=1757&byChar=[x]&byProfileType=&bySearch=&byOffice=&byPracticeArea=&byLawClerk=&byAdp="
+  notes: "Captured example only. Verify country scope, role and practice IDs, and any POST body. Keep litigation practice labels distinct from transactional M&A."
+
+davis_polk:
+  name: "Davis Polk & Wardwell"
+  directory_url: "https://www.davispolk.com/lawyers"
+  results_url: "https://dbc8kua830-dsn.algolia.net/1/indexes/*/queries"
+  method: POST
+  type: json
+  index_name: lawyer_search_en
+  pagination: request_body
+  notes: "Captured Partner-only search. Confirm practice filters and pagination in the JSON payload. Captured key and request ID intentionally omitted."
+
+simpson_thacher:
+  refresh_enabled: true
+  name: "Simpson Thacher & Bartlett"
+  directory_url: "https://www.stblaw.com/our-team"
+  results_url: "https://www.stblaw.com/dataservices/DataServices.Content.Services.Json.AttorneyLookup/TeamMembers"
+  method: POST
+  type: json
+  body_type: form
+  records_key: TeamModels
+  total_key: total
+  page_size: 100
+  page_filter_type: "Telerik.Sitefinity.DynamicTypes.Model.MainSiteInformation.PracticeArea"
+  practice_page_filters:
+    - label: Corporate
+      id: "1f4fcb0e-743d-6a02-aaf8-ff0000765f2c"
+    - label: "Mergers and Acquisitions"
+      id: "9250cb0e-743d-6a02-aaf8-ff0000765f2c"
+  form_params:
+    position: "b4e5c90e-743d-6a02-aaf8-ff0000765f2c"
+    practice: ""
+    offices: ""
+    take: 8
+    skip: 0
+    page: 1
+    pageSize: 8
+    clientSolutions: ""
+    industries: ""
+    law[]: ""
+    lawSchoolName: ""
+    school[]: ""
+    schoolName: ""
+    selectedLetter: ""
+    roleId: ""
+    
+paul_weiss:
+  refresh_enabled: true
+  name: "Paul, Weiss, Rifkind, Wharton & Garrison"
+  directory_url: "https://www.paulweiss.com/professionals"
+  results_url: "https://www.paulweiss.com/umbraco/surface/lawyerssearch/GetLawyersResult"
+  method: GET
+  type: html
+  query_params:
+    pageId: 1492
+    pageSize: 12
+    pagingNumber: 1
+    position: Partner
+    industries: All
+    offices: All
+    schools: All
+    lastname: All
+    searchText: All
+  practice_param: practices
+  practice_values:
+    - Corporate
+    - "Mergers and Acquisitions"
+  page_param: pagingNumber
+
+gibson_dunn:
+  name: "Gibson, Dunn & Crutcher"
+  directory_url: "https://www.gibsondunn.com/people/"
+  filtered_url: "https://www.gibsondunn.com/people/?_people_practices=mergers-and-acquisitions"
+  results_url: null
+  notes: "Filtered page shows lawyer cards. Test a plain HTTP fetch and check how later batches are loaded."
+
+latham_watkins:
+  name: "Latham & Watkins"
+  directory_url: "https://www.lw.com/en/people"
+  results_url: null
+  notes: "Capture the listing request after selecting the practice filter."
+
+cravath:
+  name: "Cravath, Swaine & Moore"
+  directory_url: "https://www.cravath.com/people/index.html"
+  results_url: null
+  notes: "The Partner section shows practice labels. Check View All for the complete list and exclude Retired Partner."
+
+milbank:
+  name: "Milbank"
+  directory_url: "https://www.milbank.com/en/professionals/index.html"
+  results_url: null
+  notes: "Capture requests for Corporate and Mergers and Acquisitions filters."
+
+sullivan_cromwell:
+  refresh_enabled: false
+  name: "Sullivan & Cromwell"
+  directory_url: "https://www.sullcrom.com/LawyerListing"
+  filtered_url: "https://www.sullcrom.com/LawyerListing?custom_is_practices=69620"
+  results_url: "https://searchg2.crownpeak.net/sullivancromwell-sullcrom-live/select/"
+  method: GET
+  type: json
+  partner_type_id: 25257
+  page_size: 100
+  practice_filters:
+    - label: "Mergers & Acquisitions"
+      id: 69620
+  missing_practices:
+    - Corporate
+  notes: "M&A is verified. No broad native Corporate option is published; Corporate Governance is not treated as equivalent."
+
+paul_hastings:
+  name: "Paul Hastings"
+  directory_url: "https://www.paulhastings.com/professionals"
+  filtered_url: "https://www.paulhastings.com/professionals?facets=ph_nested_practice_areas%3DMergers%2B%2526%2BAcquisitions"
+  results_url: null
+  notes: "M&A facet is in the URL. Check the Partner filter and next-page request."
+
+skadden:
+  name: "Skadden, Arps, Slate, Meagher & Flom"
+  directory_url: "https://www.skadden.com/Professionals"
+  filtered_url: "https://www.skadden.com/professionals?hasSearched=true&practice=8551cacf-412c-4b5f-bfb4-000000037583"
+  results_url: null
+  notes: "M&A practice ID is in the URL. Capture View More and verify which titles and practices are in scope."
+
+king_spalding:
+  name: "King & Spalding"
+  directory_url: "https://www.kslaw.com/people"
+  filtered_url: "https://www.kslaw.com/search?filter_capability=Mergers+%26+Acquisitions+%28M%26A%29&section=people"
+  results_url: null
+  notes: "Official M&A View All link. A zero-result shell is not evidence of an empty roster."
+
+weil:
+  name: "Weil, Gotshal & Manges"
+  directory_url: "https://www.weil.com/people"
+  results_url: null
+  notes: "Use the Practice / Capability filter. The M&A page's Key Contacts section is not the full roster."
