@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import unittest
+from dataclasses import replace
+from unittest.mock import Mock
 
 from pipeline.connectors.errors import UnexpectedResponseError
 from pipeline.models import PartnerEntryInfo
@@ -80,6 +82,29 @@ class ConfiguredProfileConnectorTests(unittest.TestCase):
 
         self.assertNotEqual(original.content_hash, changed.content_hash)
 
+    def test_preserves_utf8_accented_profile_names(self) -> None:
+        accented_entry = replace(entry(), name="Carlos T. Albarracín")
+
+        html = (
+            '<meta charset="utf-8">'
+            + HTML.replace("Alex Example", "Carlos T. Albarracín")
+        )
+
+        response = Mock()
+        response.headers = {"Content-Type": "text/html"}
+        response.content = html.encode("utf-8")
+        response.text = response.content.decode("latin-1")
+
+        session = Mock()
+        session.get.return_value = response
+
+        connector = ConfiguredHtmlProfileConnector(
+            SOURCES, session=session
+        )
+
+        profile = connector.enrich(accented_entry)
+
+        self.assertEqual(profile.name, "Carlos T. Albarracín")   
 
 if __name__ == "__main__":
     unittest.main()

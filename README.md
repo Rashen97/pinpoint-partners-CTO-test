@@ -6,6 +6,158 @@ The directory is the starting point because recruiters can scan a market segment
 
 The pipeline uses Python connectors to collect and validate firm rosters, then enriches the partner profiles. SQLite keeps both stages in a single local database. FastAPI exposes the enriched directory and profile details through a typed API, and the browser interface runs without a frontend build step.
 
+
+## Architecture and engineering decisions
+
+The system follows a modular monolith approach, separating data collection,
+validation, storage, profile enrichment, the API, and the recruiter interface.
+
+Firm websites
+    -> Directory connectors
+    -> Normalisation, deduplication and validation
+    -> SQLite roster storage
+    -> Profile enrichment
+    -> FastAPI
+    -> Recruiter directory
+
+| Technology | Reason for choosing it |
+| --- | --- |
+| Python | Suitable for HTTP requests, HTML parsing, data processing and automated testing. |
+| YAML | Keeps firm-specific source configuration separate from the refresh logic. |
+| SQLite | Provides transactional storage and relational queries without requiring a separate database service. |
+| FastAPI | Provides typed API responses, automatic validation and interactive API documentation. |
+| HTML, CSS and JavaScript | Delivers a lightweight recruiter interface without introducing a frontend build process. |
+| unittest | Supports repeatable regression testing without additional testing dependencies. |
+
+### Alternatives considered
+
+- JSON storage was used initially but replaced with SQLite to support
+  transactional updates, relational queries and controlled removal tracking.
+- PostgreSQL was deferred because SQLite meets the requirements of the
+  local prototype without additional infrastructure.
+- Microservices were avoided because independent deployment and distributed
+  communication would introduce unnecessary complexity at this stage.
+- A chat-first interface was rejected in favour of a searchable directory
+  that allows recruiters to browse, filter and compare partners efficiently.
+- AI-generated research was deferred until a reliable retrieval, identity
+  verification and citation workflow can be established.
+
+## Current coverage and validation
+
+The current implementation supports seven enabled firms:
+
+- Six firms with verified rosters within their documented scope.
+- Gibson Dunn with explicitly labelled partial Corporate coverage.
+- Quinn Emanuel is included under its native M&A Litigation practice,
+  rather than being presented as a transactional M&A practice.
+
+The latest observed local directory contained 1031 enriched profiles.
+Roster coverage and profile enrichment counts are measured separately.
+
+All 35 regression tests passed on 19 November 2026, including tests for
+source failures, partial publication, identity normalisation, pagination,
+profile enrichment, removal tracking and unexpected partial coverage.
+
+The remaining firms are documented in ASSESSMENT_REVIEW.md. I have not
+claimed complete coverage where source access, practice mapping or
+pagination could not be reliably verified.
+
+## Production roadmap
+
+## Final integration testing
+
+On 19 November 2026, I executed the full refresh pipeline and
+verified the resulting SQLite database, FastAPI backend and
+recruiter interface.
+
+| Metric | Result |
+| --- | --- |
+| Firms with verified coverage | 6 of 15 |
+| Firms with partial coverage | 1 |
+| Active roster entries | 1,043 |
+| Successfully enriched profiles | 1,031 |
+| Profile enrichment coverage | 98.85% |
+| Recorded profile enrichment failures | 12 |
+| Automated regression tests | 35 passed |
+
+The full refresh returned exit code 3 due to individual profile
+enrichment failures. Previously collected roster data remained
+available.
+
+Investigation identified six character encoding issues, three
+directory-to-profile name variations and three biographies that
+could not be extracted.
+
+I corrected the shared HTML decoding implementation to pass raw
+response bytes to BeautifulSoup, rather than relying on HTTP
+response text decoding.
+
+The correction was validated against a live Milbank profile and
+with a new automated regression test. The stored dataset has
+not been refreshed again following this correction, so the
+reported profile count remains 1,031.
+
+Strict identity validation remains in place to prevent incorrect
+profile associations.
+
+Manual frontend testing confirmed:
+
+- Partner search and filtering by firm, office and practice.
+- Sorting and pagination.
+- Individual partner profile display.
+- Saved partners and browser persistence.
+- Google research links.
+- Recent changes and labelled fictional preview data.
+- Verified and partial coverage indicators.
+
+Profile enrichment coverage refers to the collected roster,
+not complete coverage of all 15 target firms.
+
+
+### Weekly automated refresh
+
+The existing refresh command is designed to be invoked by a scheduler
+without requiring recruiters to run individual connectors.
+
+For an initial deployment, I would evaluate a lightweight scheduled job.
+As the workflow grows in complexity, an orchestration service such as
+Google Cloud Composer could manage scheduling, dependencies, retries,
+execution history and alerts.
+
+The first production improvements would be:
+
+- Per-firm refresh history and visible data freshness.
+- Alerts for failed refreshes and unexpected partial coverage.
+- Historical roster count checks to detect suspicious reductions.
+- Bounded retries and per-domain request limits.
+- Protection against overlapping refresh executions.
+- Prioritised enrichment of new and stale profiles.
+
+### Scaling from 15 to 50 firms
+
+The source registry and connector interface allow additional firms to
+be introduced without rewriting the API or recruiter interface.
+
+I would develop an assisted onboarding workflow that discovers official
+directories, identifies common extraction patterns, proposes connector
+configuration and validates sample results. Human approval would remain
+necessary before enabling a new source.
+
+I would introduce PostgreSQL and server-side search when measured database
+contention, data volume or query performance justify that migration.
+
+### Deliberately deferred functionality
+
+- AI-powered recruiter research with source citations.
+- Automated cross-firm partner move detection.
+- Real addition history beyond the initial verified baseline.
+- Shared shortlists, authentication and user management.
+- Production cloud infrastructure.
+- Canonical office and practice taxonomies across all firms.
+
+These features are valuable but were deferred in favour of establishing a
+reliable, source-backed recruitment directory within the assessment scope.
+
 ## Assessment documentation
 
 - [DEVELOPMENT_PROCESS.md](DEVELOPMENT_PROCESS.md) explains how I approached the brief, the alternatives I considered, and the evidence that changed my decisions.
@@ -24,13 +176,32 @@ python -m venv .venv
 
 ### 2. Populate SQLite
 
-```powershell
-.\.venv\Scripts\python.exe -m pipeline.refresh
-```
+The refresh needs network access to the enabled firms' websites. It creates
+`database/partners.db`, applies migrations, and updates the combined roster.
 
-The refresh needs network access to the enabled firms’ sites. It creates `database/partners.db`, applies migrations, and updates the combined roster for firms that pass validation. It retains the last verified entries for firms that fail or return partial results. Those issues appear in the run summary and cause a nonzero exit code even when other firms update successfully. Profiles appear in the directory after enrichment is saved.
+Each firm is validated independently, allowing successful sources to update
+even when another source fails.
 
-For a quicker run from a clean checkout, use `--profile-limit 10`. This runs every enabled firm’s directory refresh and attempts up to ten profiles **across the firms verified in that run**.
+The publication policy distinguishes between four outcomes:
+
+- **Verified coverage:** Updates the roster and records partners who are no
+  longer listed.
+- **Expected partial coverage:** Publishes observations from an explicitly
+  approved limited scope, without inferring removals. Gibson Dunn currently
+  operates under this policy.
+- **Unexpected partial coverage:** Publishes eligible observations while
+  preserving previously verified roster entries and returns a nonzero exit
+  code to signal that investigation is required.
+- **Failed or incomplete extraction:** Rejects the new roster and preserves
+  previously published data.
+
+Profile enrichment is separate from roster extraction. A failed profile
+request does not change a partner's listing status. Profiles become visible
+in the directory after enrichment is successfully saved.
+
+This policy prevents incomplete source responses from being interpreted as
+partner departures and provides a failure signal that a future scheduled
+orchestration service can monitor.
 
 ### 3. Start the API
 
@@ -50,6 +221,11 @@ Open a second PowerShell terminal at the repository root.
 
 Open the [partner directory](http://127.0.0.1:8080/). It connects to the API on port 8001 by default. Search for a partner, open a profile, or try Recent changes.
 
+The coverage indicator shows verified firms and partial coverage separately.
+The latest local check found six verified firms and one partial firm, Gibson
+Dunn. Wachtell’s browser capture could be parsed, but the live runner received
+HTTP 403, so Wachtell is disabled. See the [assessment review](ASSESSMENT_REVIEW.md#coverage-by-firm) for the evidence.
+
 For a standalone preview with fictional records, set the `api-base` meta tag in `frontend/index.html` to an empty string and run only the frontend server. See the [frontend guide](frontend/README.md) for the API contract and configuration details.
 
 ## Pipeline checks
@@ -60,4 +236,17 @@ For a standalone preview with fictional records, set the `api-base` meta tag in 
 .\.venv\Scripts\python.exe -m pipeline.refresh --firm paul_weiss
 ```
 
-Use `--directory-only` to refresh the combined roster without profile enrichment. Use `--firm` to diagnose a single directory connector. Targeted runs stop before combined publication and enrichment. See the [SQLite table guide](database/README.md) for what each stage stores.
+Use `--directory-only` to refresh the combined roster without profile enrichment. Use `--firm` to diagnose a single directory connector. By default, targeted runs stop before combined publication and enrichment. See the [SQLite table guide](database/README.md) for what each stage stores.
+
+### Preview Gibson Dunn’s partial coverage
+
+```powershell
+.\.venv\Scripts\python.exe -m pipeline.refresh --firm gibson_dunn --publish-partial --profile-limit 3
+```
+
+The command collects the configured practice groups and enriches up to three profiles. Refresh
+the directory and select the firm to see the saved profiles marked
+**Partial coverage**. Remove `--profile-limit 3` to attempt all profiles.
+Gibson Dunn also runs in the default refresh under an explicit partial-coverage
+setting. It stays outside the verified firm count. A partial import
+does not mark absent partners as removed.

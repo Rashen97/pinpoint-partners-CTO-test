@@ -17,7 +17,7 @@ def list_directory(connection: sqlite3.Connection) -> PartnerDirectory:
         """
         SELECT p.partner_entry_id, e.firm_key, e.firm_name, e.name,
                COALESCE(NULLIF(p.role, ''), e.role) AS role,
-               p.offices, p.practices, e.profile_url,
+               p.offices, p.practices, e.profile_url, e.scope_verified,
                e.offices AS roster_offices, e.practices AS roster_practices
         FROM partner_profiles_all AS p
         JOIN partner_entries_all AS e ON e.partner_entry_id = p.partner_entry_id
@@ -33,13 +33,15 @@ def list_directory(connection: sqlite3.Connection) -> PartnerDirectory:
             values[field] = json.loads(values[field]) or json.loads(roster_value)
         records.append(PartnerEntry.model_validate(values))
 
-    verified_firm_count = connection.execute(
+    verified_firm_count, partial_firm_count = connection.execute(
         """
-        SELECT COUNT(DISTINCT firm_key)
+        SELECT COUNT(DISTINCT CASE WHEN scope_verified = 1 THEN firm_key END),
+               COUNT(DISTINCT firm_key) -
+               COUNT(DISTINCT CASE WHEN scope_verified = 1 THEN firm_key END)
         FROM partner_entries_all
         WHERE no_longer_listed_at IS NULL
         """
-    ).fetchone()[0]
+    ).fetchone()
     changes = [
         RosterChange(kind="no_longer_listed", **dict(row))
         for row in connection.execute(
@@ -53,7 +55,9 @@ def list_directory(connection: sqlite3.Connection) -> PartnerDirectory:
     return PartnerDirectory(
         records=records,
         coverage=RosterCoverage(
-            verified_firm_count=verified_firm_count, target_firm_count=TARGET_FIRM_COUNT
+            verified_firm_count=verified_firm_count,
+            partial_firm_count=partial_firm_count,
+            target_firm_count=TARGET_FIRM_COUNT,
         ),
         changes=changes if verified_firm_count or changes else None,
     )

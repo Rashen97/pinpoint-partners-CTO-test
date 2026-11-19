@@ -48,12 +48,12 @@ class ConfiguredHtmlProfileConnector(ProfileConnector):
             raise UnexpectedResponseError(
                 f"Profile returned {content_type or 'an unknown content type'}, not HTML"
             )
-        return self.parse(entry, response.text, config)
+        return self.parse(entry, response.content, config)
 
     def parse(
         self,
         entry: PartnerEntryInfo,
-        html: str,
+        html: str | bytes,
         config: dict[str, Any] | None = None,
     ) -> PartnerProfileInfo:
         config = config or self.sources.get(entry.firm_key)

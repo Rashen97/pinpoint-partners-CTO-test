@@ -18,13 +18,13 @@ Firm-specific extractors produce a common `PartnerEntryInfo` record with the nam
 
 I kept `python -m pipeline.refresh` as the operational entry point. It runs enabled directory connectors sequentially, validates their output, writes the combined entries, and then enriches that dataset. Sequential extraction simplified debugging and made request load easier to reason about. Profile fetching and parsing live in a separate package. One shared HTML parser uses per-firm selectors, keeping routine markup differences in configuration. A site with a different profile format can justify a custom parser later.
 
-The full run exercises the workflow a scheduler will eventually invoke. A targeted `--firm` run diagnoses a single directory source and stops before combined publication or enrichment. `--directory-only` checks combined extraction and storage, and `--profile-limit` caps enrichment across the firms verified in that run.
+The full run exercises the workflow a scheduler will eventually invoke. A targeted `--firm` run diagnoses a single directory source unless partial publication is explicitly requested. `--directory-only` checks combined extraction and storage, and `--profile-limit` caps enrichment across the eligible results. Explicitly allowed partial coverage, such as Gibson Dunn’s M&A roster, gives recruiters usable results while keeping omissions outside removal tracking.
 
 ## 3. Keep publication and identity tied to evidence
 
 I began with local JSON files so I could inspect raw and normalised data while the schema was changing. The JSON design distinguished diagnostic output from a verified roster and used atomic file replacement. I then moved to SQLite to support versioned migrations, transactional writes, and backend queries on the same machine. SQLite kept setup small for the assessment. The pipeline owns writes and migrations, and the API opens the file read-only.
 
-The raw per-firm tables retain extraction output and diagnostics. The verified per-firm tables preserve successful work. I initially updated `partner_entries_all` only when every enabled firm passed the refresh checks. I changed that after one broken source held back healthy firms. The combined table now updates for the firms verified in that run, and preserves the previous entries for the others. Enrichment writes to `partner_profiles_all` for the verified firms. The command still returns a nonzero exit code when a source fails or returns partial data, so an operator can act on the failure.
+The raw per-firm tables retain extraction output and diagnostics. The verified per-firm tables preserve successful work. I initially updated `partner_entries_all` only when every enabled firm passed the refresh checks. I changed that after one broken source held back healthy firms. The combined table now updates for verified firms and explicitly approved limited-scope sources. Enrichment writes eligible profiles to `partner_profiles_all`. The command still returns a nonzero exit code when a source fails or returns an unexpected partial result, so an operator can act on the failure.
 
 A deterministic `partner_entry_id` is derived from the firm and canonical profile URL. This makes repeat loads predictable and avoids merging people by name. A new firm or changed profile URL can produce a new entry ID. Stable aliases would be needed to carry identity across a URL change, and cross-firm matches require a separate person identity supported by evidence.
 
@@ -48,8 +48,11 @@ I used each firm’s own terminology and checked how the source establishes comp
 - **Milbank.** The search returns paginated attorney cards. I checked offsets, declared totals, and duplicates before accepting the results. I included the native Corporate and M&A filters, Distressed M&A, and explicit regional equivalents. A mixed practice label alone is insufficient to assign in-scope work to everyone it returns.
 - **Quinn Emanuel.** I initially read the brief as transactional and treated the firm as a scope exception. Because the brief explicitly lists the firm, I included its published M&A Litigation team under the native label. The practice team’s expansion endpoint supplied the roster. The general directory capture showed multiple roles and did not establish practice scope.
 - **Sullivan & Cromwell.** I initially found M&A but missed the broader Corporate group, which the firm calls General Practice. I verified that mapping against the firm’s description and added both explicit M&A filters. The first multi-page Corporate extraction repeated a profile. Sorting by source record ID gave stable page boundaries in the live check.
+- **Davis Polk.** I started with 58 M&A partners over seven pages, then used the firm’s Corporate overview to identify all 22 practice groups and follow their public team pages. The Partner filter sometimes returns Special Counsel, so the connector checks each displayed title. I used a firm announcement to verify one leadership title that omits the word Partner. Environmental returned zero Partner cards, and its complete unfiltered team gave evidence for a genuine zero. If a group fails verification, the partial-coverage path still gives recruiters the verified results without inferring removals.
+- **Gibson Dunn.** I started from the firm’s M&A Partner filter and checked every Load More batch against the reported total. The firm’s London training materials also identify Capital Markets, Private Equity, Finance, and Investment Funds as areas of corporate work. I used those named practices as additional directory filters across all offices. The training materials cover one programme, so I kept the combined results labelled partial pending a firm-wide Corporate practice mapping. [Gibson Dunn training materials](https://www.gibsondunn.com/wp-content/uploads/2025/08/LE-Recruiting-TrainingWithGDCLondon-0825-v4.pdf)
+- **Wachtell.** The browser capture showed Corporate results across multiple roles. I made the connector read each result’s Position and verified that it returned 34 partners from 122 rows. A direct request for the Corporate results returned HTTP 403. I left automatic refresh disabled because the parser test established what can be extracted from saved HTML, while a weekly refresh needs repeatable live access.
 
-The five-firm directory refresh validated extraction and publication. Profile enrichment was checked separately. The firm-by-firm evidence and outstanding source failures are in the [assessment review](ASSESSMENT_REVIEW.md).
+The six-firm directory refresh validated publication for five verified firms and Davis Polk’s M&A-only results. Profile enrichment was checked separately. The firm-by-firm evidence and outstanding source failures are in the [assessment review](ASSESSMENT_REVIEW.md).
 
 ## 6. Prioritise reliability before expanding to 50 or 100 firms
 
@@ -60,3 +63,31 @@ A larger registry alone still leaves someone learning every site. I would test b
 Shared HTML and JSON extractors can absorb common request, response, and pagination patterns. A discovery assistant could also propose draft settings or draft a small extractor for a source it can inspect. A reviewer would check scope and coverage before enabling the source. I would test this on one known firm and one new firm and measure how much manual investigation it replaces. Approved configurations can then run weekly and go back to review on unexpected changes. A licensed dataset is another option if the business needs broad coverage sooner than it can verify sources itself.
 
 For responsible collection at that scale, I would review site access terms and crawler rules before onboarding, make requests identifiable and bounded per domain, and stop when access is blocked. I would retain the professional fields the recruiter needs, attach evidence and observation times, and set retention and correction rules before sharing the system more widely. These are production measures to implement alongside scheduling and source monitoring.
+
+
+## 7. Distinguish expected coverage limitations from operational failures
+
+During the reliability review, I identified that permission to publish
+partial coverage should be separate from whether partial coverage is
+expected.
+
+I introduced the expected_partial_scope configuration property alongside
+publish_partial_scope.
+
+For Gibson Dunn, limited Corporate coverage is intentional. For a firm
+with an established verified scope, an unexpected reduction in practice
+coverage should generate an operational failure signal.
+
+The refresh can therefore preserve previously verified data, publish
+eligible observations and return a nonzero exit code when investigation
+is required.
+
+I added a regression test using a simulated partial connector response
+and a temporary SQLite database. The test verifies that the previous
+roster remains available, new observations are published and the
+unexpected partial status is reported.
+
+Following this change, all 35 regression tests passed.
+
+Historical roster count monitoring remains a production improvement,
+rather than a capability claimed by the current prototype.

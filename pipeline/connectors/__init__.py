@@ -6,6 +6,8 @@ from typing import Any
 
 from pipeline.connectors.base import Connector
 from pipeline.connectors.cravath import CravathConnector
+from pipeline.connectors.davis_polk import DavisPolkConnector
+from pipeline.connectors.gibson_dunn import GibsonDunnConnector
 from pipeline.connectors.kirkland import KirklandConnector
 from pipeline.connectors.milbank import MilbankConnector
 from pipeline.connectors.paul_weiss import PaulWeissConnector
@@ -17,6 +19,8 @@ from pipeline.connectors.wachtell_lipton import WachtellLiptonConnector
 
 CONNECTORS: dict[str, type[Connector]] = {
     "cravath": CravathConnector,
+    "davis_polk": DavisPolkConnector,
+    "gibson_dunn": GibsonDunnConnector,
     "kirkland": KirklandConnector,
     "milbank": MilbankConnector,
     "paul_weiss": PaulWeissConnector,

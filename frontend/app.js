@@ -113,7 +113,11 @@ function renderRow(record) {
     }
   });
   bookmarkCell.append(bookmark);
-  row.append(personCell, element("td", record.firm_name), element("td", record.offices.join(", ") || "—"), practiceCell, bookmarkCell);
+  const firmCell = element("td", record.firm_name);
+  if (record.scope_verified === false) {
+    firmCell.append(element("span", "Partial coverage", "role"));
+  }
+  row.append(personCell, firmCell, element("td", record.offices.join(", ") || "—"), practiceCell, bookmarkCell);
   return row;
 }
 
@@ -295,7 +299,10 @@ async function start() {
       byId("data-status").textContent = "Demo data · Sample records";
       byId("data-status").hidden = false;
     } else if (coverage?.verified_firm_count != null && coverage?.target_firm_count != null) {
-      byId("data-status").textContent = `Verified coverage: ${coverage.verified_firm_count} of ${coverage.target_firm_count} firms`;
+      const partial = coverage.partial_firm_count > 0
+        ? ` · ${coverage.partial_firm_count} with partial coverage`
+        : "";
+      byId("data-status").textContent = `Verified coverage: ${coverage.verified_firm_count} of ${coverage.target_firm_count} firms${partial}`;
       byId("data-status").hidden = false;
     }
     render();

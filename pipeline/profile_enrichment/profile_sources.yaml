@@ -1,7 +1,15 @@
+davis_polk:
+  selectors:
+    biography: ".lawyer--bio .field-name--field_biography"
+
 cravath:
   selectors:
     name: "h1"
     biography: ".tabpane--text .rte[class*='onlyShowInPrint']"
+
+gibson_dunn:
+  selectors:
+    biography: "main .content-with-callouts-custom-fp-block .wp-block-column:has(p)"
 
 milbank:
   selectors:

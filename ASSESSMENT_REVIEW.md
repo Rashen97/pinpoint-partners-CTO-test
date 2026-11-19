@@ -9,7 +9,7 @@ I used these criteria to decide what the prototype needed to demonstrate and wha
 | Criterion | What works today | What I would improve for regular use |
 | --- | --- | --- |
 | **Recruiter value** | Recruiters can find a partner, save a shortlist, read a firm-sourced profile, and open a focused web search. Recent changes shows when a partner is no longer listed and includes labelled fictional examples. | Show when a partner is first seen after a firm’s initial verified list. Report a move between firms when there is supporting evidence, such as a hiring announcement. |
-| **Coverage and data quality** | The default refresh covers five of the 15 firms. The table below explains the status of each firm. The system tracks which firms’ partner lists are verified and how many profiles have been collected. | For each new firm, check that the source covers the relevant partners, practices, offices, and pages. Show when each firm was last checked and investigate unexpected drops before publishing an update. |
+| **Coverage and data quality** | Six firms have verified rosters. Gibson Dunn has partial coverage across M&A and four Corporate practices. The table below explains the status of all 15 firms. The system tracks verified partner lists separately from collected profiles. | For each new firm, check that the source covers the relevant partners, practices, offices, and pages. Show when each firm was last checked and investigate unexpected drops before publishing an update. |
 | **Engineering quality** | The project collects, checks, and saves data before displaying it. The directory can read the saved records, and the refresh process controls changes to them. | Keep a history of each firm’s updates so the team can trace a change back to its source. Test what happens when a site changes, returns incomplete results, or becomes unavailable. |
 | **Weekly operation and scale** | One command refreshes firm directories and collects profile details. It is designed to run as a scheduled job. If one firm fails, the others can update while the failed firm keeps its last verified list. | Run the command weekly using a tool such as Google Cloud Composer. Add alerts and show when each firm was last verified. For 50 firms and beyond, build a tool that takes firm names and optional homepages, finds candidate directories, and checks sample results. A reviewer would confirm coverage before enabling each source. [Google Cloud scheduling guide](https://docs.cloud.google.com/composer/docs/composer-3/schedule-and-trigger-dags) |
 | **Prioritisation and scope** | I focused on getting firm data onto the recruiter’s screen and documenting the coverage gaps. I deferred AI chat, shared shortlists, and automated move detection. | Make weekly updates reliable and show how current the data is. Use recruiter feedback to decide whether broader coverage or better market-change tracking should come next. |
@@ -21,12 +21,12 @@ I used these criteria to decide what the prototype needed to demonstrate and wha
 | Firm | Status | Evidence and remaining work |
 | --- | --- | --- |
 | Kirkland & Ellis | Direct access blocked | The official directory has Practice, Level, and Office filters in web review. A direct directory request returned HTTP 403. The captured results endpoint previously returned HTTP 500. [Directory](https://www.kirkland.com/lawyers) |
-| Wachtell, Lipton, Rosen & Katz | Automated access blocked | The directory exposes an attorney search, but the refresh runner received HTTP 403. Corporate is the documented scope candidate. Seek an approved source and verify coverage before enabling. [Directory](https://www.wlrk.com/attorneys/) |
+| Wachtell, Lipton, Rosen & Katz | Automatic refresh disabled | The connector read the Position column and extracted 34 Corporate partners from 122 attorney rows saved in a browser capture. The same Corporate request returned HTTP 403 (Forbidden) from the Python runner. The capture verifies the parser. Automatic publication requires a source the runner can access and verify on every run. [Directory](https://www.wlrk.com/attorneys/) |
 | Quinn Emanuel Urquhart & Sullivan | Enabled for M&A Litigation | The practice team's View More endpoint returned 62 attorney cards, including 60 partners and a chair counted among those partners, with no further pages. A linked profile passed enrichment. This roster covers the firm's published M&A Litigation team. The firm describes itself as litigation-only and says it has no corporate transactional practice. [Directory](https://www.quinnemanuel.com/attorneys) · [M&A Litigation](https://www.quinnemanuel.com/practice-areas/mergers-acquisitions-litigation/) |
-| Davis Polk & Wardwell | Directory access blocked | The directory returned HTTP 403 during web review. The official M&A practice page was accessible. Verify authorised access to a complete source, including Corporate filters and pagination. [Directory](https://www.davispolk.com/lawyers) · [M&A practice](https://www.davispolk.com/mergers-acquisitions) |
-| Simpson Thacher & Bartlett | Legacy endpoint failed | The configured results endpoint returned HTTP 404. The official team page still exposes Practice, Office, and Position filters. Its all-lawyers view is a candidate for replacing the endpoint and re-verifying both practice filters. [Directory](https://www.stblaw.com/our-team) |
+| Davis Polk & Wardwell | Enabled, roster verified | Collected 190 unique partners across all 22 published Corporate practice groups, including M&A, with all offices selected. Environmental’s complete team listed counsel and associates only. The connector checks listed titles because the site’s Partner filter can also return counsel. [M&A team](https://www.davispolk.com/mergers-acquisitions/team) · [Corporate practices](https://www.davispolk.com/corporate) |
+| Simpson Thacher & Bartlett | Replacement source found, full run rate limited | The new public listing API reported 421 Corporate and 153 M&A partners before deduplication. The replacement connector verified the first 20 Corporate pages, then received HTTP 429. A paced retry and a profile request were also rate limited, so the firm remains disabled pending complete verification. [Directory](https://www.stblaw.com/our-team/) |
 | Paul, Weiss, Rifkind, Wharton & Garrison | Enabled | The combined refresh stored 216 active entries across Corporate and M&A. At the time of the check, 214 active profiles had saved enrichment. [Directory](https://www.paulweiss.com/professionals) |
-| Gibson, Dunn & Crutcher | Directory found | The public page has attorney cards and a known M&A filter. The broader Corporate mapping, subsequent result batches, and a pipeline connector still need verification. [Directory](https://www.gibsondunn.com/people/) |
+| Gibson, Dunn & Crutcher | Enabled with partial scope | The connector retrieved 278 unique partners across M&A, Capital Markets, Private Equity, Finance, and Investment Funds, without an office filter. Each search was checked against the reported total. The firm’s London training materials support the selected Corporate practices, and global Corporate scope remains unverified. [Directory](https://www.gibsondunn.com/people/) · [Firm training materials](https://www.gibsondunn.com/wp-content/uploads/2025/08/LE-Recruiting-TrainingWithGDCLondon-0825-v4.pdf) |
 | Latham & Watkins | Directory found | The firm has official People and M&A pages. Verify how search combines Partner, practice, and office filters, and how it pages through the results. [Directory](https://www.lw.com/en/people) · [M&A practice](https://www.lw.com/en/practices/mergers-and-acquisitions) |
 | Cravath, Swaine & Moore | Enabled | The Corporate and M&A searches matched their reported totals. The combined refresh stored 65 unique active entries. A limited test enriched three profiles and the API returned all three. [Directory](https://www.cravath.com/people/index.html) |
 | Milbank | Enabled | The scope includes the firm's Corporate and M&A filters, Distressed M&A, and explicit regional equivalents. The connector checks pagination without an office restriction and retains Partner results. Mixed and adjacent labels do not qualify on their own. [Directory](https://www.milbank.com/en/professionals/index.html) |
@@ -38,9 +38,27 @@ I used these criteria to decide what the prototype needed to demonstrate and wha
 
 ## How coverage affects the product
 
-The default refresh enables Paul Weiss, Cravath, Quinn Emanuel, Milbank, and Sullivan & Cromwell. The pipeline updates the combined roster for firms that pass extraction and scope checks. The recruiter directory displays active profiles after enrichment has been saved, so roster and profile counts measure different stages.
+The default refresh enables Paul Weiss, Cravath, Quinn Emanuel, Milbank, Sullivan & Cromwell, Davis Polk, and Gibson Dunn. The directory reports **6 of 15 firms verified** and **1 with partial coverage**. Gibson Dunn’s configured practice refresh can add or update observed entries. Full Corporate coverage still needs verification before it can count as verified or produce removals.
 
-A blocked, broken, or partial response leaves that firm’s listing status intact. The refresh reports the issue even when other firms update successfully. In production I would show each firm’s last verified update in the directory.
+
+A failed or incomplete extraction preserves the previously published
+roster. Explicitly approved partial coverage can publish valid observations
+without inferring removals or overwriting verified roster entries.
+
+The refresh distinguishes expected partial coverage from unexpected
+deterioration. Unexpected partial coverage returns a nonzero exit code
+while preserving existing data and publishing eligible observations.
+This allows a future scheduler to detect operational problems without
+discarding useful information.
+
+All 35 regression tests passed, including a dedicated test for unexpected
+partial coverage and preservation of previously verified partners.
+
+A remaining production limitation is that a source could return an
+apparently complete but unusually small roster. Historical count
+comparisons and investigation thresholds would provide additional
+protection against false removal notifications.
+
 
 ## Ideas and future improvements
 
@@ -63,6 +81,31 @@ The Git timeline covers approximately **5 hours and 6 minutes**, from the initia
 | 19 November | 01:52 | SQLite-backed API and frontend integration | `08789df` |
 | 19 November | 02:26 | Expanded firm coverage and Recent changes preview | `d8c7567` |
 | 19 November | 02:50 | README, development log, and assessment review | `817ea8a` |
+
+
+## Time log
+
+Total estimated active working time: approximately 7 hours.
+
+I worked on the assessment across two sessions, beginning on the evening
+of 18 November and continuing on the morning of 19 November 2026.
+
+The initial Git timeline spans approximately 5 hours and 6 minutes.
+This included planning, implementation, documentation and a short
+break following the initial repository commit.
+
+I resumed work the following morning to improve firm coverage,
+introduce partial-scope publication, review refresh failure handling,
+and complete additional regression testing.
+
+The total is an honest estimate of active working time, excluding
+breaks and overnight downtime.
+
+I exceeded the suggested six-hour time budget by approximately one
+hour, focusing the additional time on data integrity, reliable refresh
+behaviour and verification rather than introducing further product
+features.
+
 
 ## How I used AI
 
