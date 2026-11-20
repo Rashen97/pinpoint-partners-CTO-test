@@ -251,11 +251,37 @@ king_spalding:
   notes: "Official M&A View All link. A zero-result shell is not evidence of an empty roster."
 
 weil:
-  refresh_enabled: false
+  refresh_enabled: true
+  publish_partial_scope: true
+  expected_partial_scope: true
   name: "Weil, Gotshal & Manges"
   directory_url: "https://www.weil.com/people"
-  results_url: null
-  source_status: directory_found
+  results_url: "https://www.weil.com/WeilPeopleListing/Execute"
+  method: GET
+  type: json
+  page_size: 10
+  request_interval_seconds: 2
+  item_id: "{2186BD5B-A7D8-40E1-87CD-9246016A7816}"
+  partner_role_id: "{9B7FDA9B-B476-422F-9F30-68DC43AC4126}"
+  practice_filters:
+    "Antitrust": "{0D4973AB-A311-4013-8314-AE695E63EF02}"
+    "Asset Management Examinations and Enforcement": "{19177A88-8AD7-45AC-B989-072A8EC8A25B}"
+    "Banking & Finance": "{A9189932-1CF3-42F1-B34C-F7D988B97187}"
+    "Capital Markets": "{E1D0D8AC-FA0D-447D-958C-60C3D590EA0E}"
+    "Environmental Transactions": "{4EE9E27B-7DD4-425B-9BC8-79F4601D48FB}"
+    "Foreign Investment & Trade": "{9E5E97C9-4E30-44B9-9EDB-198FE554C23F}"
+    "Governance, Securities & Reporting Group": "{FA11214A-13CE-45CB-BF50-66CF8D66BE98}"
+    "Intellectual Property": "{D01881A3-F0D9-4D88-88C4-939A553679F6}"
+    "Liability Management and Strategic Capital Solutions": "{797CA2E2-098A-41DB-8363-CF86FBCC2584}"
+    "Mergers & Acquisitions": "{2F2727CC-4E6C-443B-8777-5FE134DFDDB5}"
+    "Privacy & Cybersecurity": "{8840E8E1-06E3-4E54-B74B-093020B62663}"
+    "Private Equity": "{C4F4F120-2CEF-4831-B05F-CE442ECB0789}"
+    "Private Funds": "{59F55B5F-A507-4F24-A865-3C79EA2BF015}"
+    "Real Estate": "{D2401C26-3562-4072-86D0-FA4D6C9A26BB}"
+    "Regulatory Transactions": "{AFBEA074-E743-4096-9921-40B7DC614171}"
+    "Structured Finance & Derivatives": "{C1DB2BD8-079F-4BA5-AF63-F02FAFF70B76}"
+    "Technology & IP Transactions": "{F3FF624E-525F-4DEB-BF6B-C4709C7E08E0}"
+  source_status: partial_scope
   practice_reference_url: "https://www.weil.com/experience/departments/corporate"
-  source_review: "The People page exposes Mergers & Acquisitions, Partner and Office filters. Cross-check the Corporate department against directory practice mappings and verify all result pages."
-  notes: "Use the Practice / Capability filter. The M&A page's Key Contacts section is not the full roster."
+  source_review: "All 17 matching Corporate practice filters reconciled with their reported totals without an office restriction. The 222 distinct URLs include title exceptions requiring review."
+  notes: "Leadership cards can duplicate regular results. Regular refresh publishes partial coverage while subpractices without matching filters remain unverified."

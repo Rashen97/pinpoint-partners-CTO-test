@@ -54,3 +54,8 @@ quinn_emanuel:
 sullivan_cromwell:
   selectors:
     biography: "#main_bio_container .main-bio-version"
+
+weil:
+  selectors:
+    name: ".header-b h1"
+    biography: ".bio-top .intro"

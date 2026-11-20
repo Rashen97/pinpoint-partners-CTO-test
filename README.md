@@ -44,14 +44,19 @@ Firm websites
 
 ## Current coverage and validation
 
-The current implementation supports seven enabled firms:
+Post-assessment, regular refreshes also include Weil with partial Corporate
+coverage across 17 directory filters. The partial roster can add or update
+observed partners without inferring removals. The figures below record the
+submitted assessment baseline.
+
+The submitted implementation supported seven enabled firms:
 
 - Six firms with verified rosters within their documented scope.
 - Gibson Dunn with explicitly labelled partial Corporate coverage.
 - Quinn Emanuel is included under its native M&A Litigation practice,
   rather than being presented as a transactional M&A practice.
 
-The latest observed local directory contained 1031 enriched profiles.
+The assessment snapshot contained 1031 enriched profiles.
 Roster coverage and profile enrichment counts are measured separately.
 
 All 35 regression tests passed on 19 November 2026, including tests for
@@ -243,8 +248,9 @@ Open a second PowerShell terminal at the repository root.
 Open the [partner directory](http://127.0.0.1:8080/). It connects to the API on port 8001 by default. Search for a partner, open a profile, or try Recent changes.
 
 The coverage indicator shows verified firms and partial coverage separately.
-The latest local check found six verified firms and one partial firm, Gibson
-Dunn. Wachtell’s browser capture could be parsed, but the live runner received
+The assessment check found six verified firms and one partial firm, Gibson
+Dunn. A subsequent successful refresh can also publish Weil as partial.
+Wachtell’s browser capture could be parsed, but the live runner received
 HTTP 403, so Wachtell is disabled. See the [assessment review](ASSESSMENT_REVIEW.md#coverage-by-firm) for the evidence.
 
 For a standalone preview with fictional records, set the `api-base` meta tag in `frontend/index.html` to an empty string and run only the frontend server. See the [frontend guide](frontend/README.md) for the API contract and configuration details.
