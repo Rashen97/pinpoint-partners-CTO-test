@@ -64,3 +64,8 @@ skadden:
   selectors:
     name: "h1.profile-header-name"
     biography: "#about .overview-wrapper"
+
+latham_watkins:
+  selectors:
+    name: "h1.hero-people-detail__name"
+    biography: "#profile .field-bioprofile"
