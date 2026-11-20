@@ -20,13 +20,17 @@ def row(slug, title="Partner", retired=False):
 class SkaddenTests(unittest.TestCase):
     def setUp(self):
         self.config = load_firms()["skadden"]
+        self.practice_id = self.config["practice_filters"]["Mergers and Acquisitions"]
         self.session = Mock()
         self.connector = SkaddenConnector(
-            "skadden", {**self.config, "request_interval_seconds": 0}, self.session,
+            "skadden", {
+                **self.config, "request_interval_seconds": 0, "scope_verified": False,
+                "practice_filters": {"Mergers and Acquisitions": self.practice_id},
+            }, self.session,
         )
 
-    def batch(self, rows, *, more, total=3, include_role=True):
-        ids = [self.config["practice_id"]]
+    def batch(self, rows, *, more, total=3, include_role=True, practice_id=None):
+        ids = [practice_id or self.practice_id]
         if include_role:
             ids.append(self.config["partner_position_id"])
         return Mock(url=self.config["results_url"], **{
@@ -83,8 +87,22 @@ class SkaddenTests(unittest.TestCase):
         with self.assertRaisesRegex(UnexpectedResponseError, "active partner"):
             self.connector.extract()
 
-    def test_registered_for_expected_partial_publication(self):
+    def test_merges_overlapping_practices_after_validating_each_search(self):
+        corporate_id = self.config["practice_filters"]["Corporate"]
+        self.connector.config["practice_filters"]["Corporate"] = corporate_id
+        self.connector.config["scope_verified"] = True
+        self.session.get.side_effect = [
+            self.batch([row("alex")], more=False, total=1),
+            self.batch([row("alex"), row("blake")], more=False, total=2, practice_id=corporate_id),
+        ]
+        result = self.connector.extract()
+        self.assertTrue(result.scope_verified)
+        self.assertEqual(result.covered_practices, ["Mergers and Acquisitions", "Corporate"])
+        self.assertEqual(result.expected_total, 2)
+        self.assertEqual(result.records[0].practices, ["Mergers and Acquisitions", "Private Equity", "Corporate"])
+
+    def test_registered_for_verified_publication(self):
         self.assertIsInstance(build_connector("skadden", self.config), SkaddenConnector)
         self.assertTrue(self.config["refresh_enabled"])
-        self.assertTrue(self.config["publish_partial_scope"])
-        self.assertTrue(self.config["expected_partial_scope"])
+        self.assertTrue(self.config["scope_verified"])
+        self.assertFalse(self.config.get("publish_partial_scope"))

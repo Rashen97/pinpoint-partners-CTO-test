@@ -11,6 +11,7 @@ from pipeline.connectors.base import Connector
 from pipeline.connectors.errors import ConnectorError, UnexpectedResponseError
 from pipeline.connectors.http import DEFAULT_TIMEOUT_SECONDS, build_session
 from pipeline.models import ExtractionResult, PartnerEntryInfo
+from pipeline.processing.deduplicate import deduplicate_records
 
 
 class SkaddenConnector(Connector):
@@ -19,15 +20,38 @@ class SkaddenConnector(Connector):
         self.session = session or build_session()
 
     def extract(self) -> ExtractionResult:
+        filters = self.config["practice_filters"]
+        if not filters:
+            raise ConnectorError("Skadden has no configured practice filters")
+        records = []
+        pages_fetched = 0
+        for practice, practice_id in filters.items():
+            if pages_fetched:
+                sleep(self.config["request_interval_seconds"])
+            entries, pages = self._extract_practice(practice, practice_id)
+            records.extend(entries)
+            pages_fetched += pages
+
+        unique = deduplicate_records(records)
+        return ExtractionResult(
+            firm_key=self.firm_key,
+            records=unique,
+            expected_total=len(unique),
+            pages_fetched=pages_fetched,
+            extraction_complete=True,
+            scope_verified=self.config.get("scope_verified") is True,
+            covered_practices=list(filters),
+        )
+
+    def _extract_practice(self, practice, practice_id):
         records = []
         source_ids = set()
         profile_urls = set()
         offset = 0
         pages = 0
         total = None
-        practice = self.config["practice_label"]
         while total is None or offset < total:
-            payload, source_url = self._fetch(offset)
+            payload, source_url = self._fetch(offset, practice_id)
             reported = payload.get("ResultCount")
             rows = payload.get("SearchResults")
             if (
@@ -51,23 +75,14 @@ class SkaddenConnector(Connector):
             if payload.get("HasMoreResults") is not (offset < total):
                 raise UnexpectedResponseError(f"Skadden continuation disagreed with its total at offset {offset}")
 
-        return ExtractionResult(
-            firm_key=self.firm_key,
-            records=records,
-            expected_total=total,
-            pages_fetched=pages,
-            extraction_complete=True,
-            scope_verified=False,
-            covered_practices=[practice],
-            missing_practices=["Broader Corporate and specialist M&A practices"],
-        )
+        return records, pages
 
-    def _fetch(self, offset):
+    def _fetch(self, offset, practice_id):
         if offset:
             sleep(self.config["request_interval_seconds"])
         params = {
             "hasSearched": "true",
-            "practice": self.config["practice_id"],
+            "practice": practice_id,
             "position": self.config["partner_position_id"],
             "skip": offset,
         }
