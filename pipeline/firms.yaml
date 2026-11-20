@@ -230,14 +230,22 @@ paul_hastings:
   notes: "M&A facet is in the URL. Check the Partner filter and next-page request."
 
 skadden:
-  refresh_enabled: false
+  refresh_enabled: true
+  publish_partial_scope: true
+  expected_partial_scope: true
   name: "Skadden, Arps, Slate, Meagher & Flom"
   directory_url: "https://www.skadden.com/Professionals"
-  filtered_url: "https://www.skadden.com/professionals?hasSearched=true&practice=8551cacf-412c-4b5f-bfb4-000000037583"
-  results_url: null
-  source_status: directory_found
-  source_review: "Official Professionals page exposes Practice, Location, Position and View More. The initial page includes a result template, so verify rendered results and the full paging sequence."
-  notes: "M&A practice ID is in the URL. Capture View More and verify which titles and practices are in scope."
+  results_url: "https://www.skadden.com/api/sitecore/professionals/search"
+  method: GET
+  type: json
+  practice_label: "Mergers and Acquisitions"
+  practice_id: "8551cacf-412c-4b5f-bfb4-000000037583"
+  partner_position_id: "64063c2e-9576-4f66-91fa-166f4bede9b8"
+  request_interval_seconds: 2
+  source_status: partial_scope
+  practice_reference_url: "https://www.skadden.com/capabilities/practices/corporate"
+  source_review: "The M&A and Partner filters with no location restriction returned 122 unique profiles across 13 batches."
+  notes: "Broader Corporate and specialist M&A filters require validation."
 
 king_spalding:
   refresh_enabled: false
