@@ -146,11 +146,14 @@ def refresh_profiles(
     entries: list[PartnerEntryInfo],
     args: argparse.Namespace,
     source: str,
+    directory_summaries: dict[tuple[str, str], str | None] | None = None,
 ) -> tuple[dict[str, Any], int]:
     if args.directory_only:
         return {"status": "skipped", "reason": "--directory-only", "source": source, "database": None}, 0
     profile_connector = ConfiguredHtmlProfileConnector(load_profile_sources())
-    enrichment = enrich_entries(entries, profile_connector, limit=args.profile_limit)
+    enrichment = enrich_entries(
+        entries, profile_connector, limit=args.profile_limit, directory_summaries=directory_summaries,
+    )
     profiles_path = database.save_all_partner_profiles(
         enrichment.profiles, enrichment.failures, firm_key=args.firm
     )
@@ -211,7 +214,8 @@ def main() -> int:
             result = partial_results[0]
             source = database.save_partial_partner_entries(result)
             target["database"]["all_partner_entries"] = source
-            target["profile_enrichment"], code = refresh_profiles(database, result.records, args, source)
+            summaries = {(result.firm_key, url): summary for url, summary in result.directory_summaries.items()}
+            target["profile_enrichment"], code = refresh_profiles(database, result.records, args, source, summaries)
             print(json.dumps(target, indent=2, ensure_ascii=False))
             return code
         print(json.dumps(target, indent=2, ensure_ascii=False))
@@ -243,7 +247,12 @@ def main() -> int:
             entry for entry in database.load_all_partner_entries()
             if entry.firm_key in verified_firm_keys or entry.partner_entry_id in partial_entry_ids
         ]
-        profile_output, profile_exit_code = refresh_profiles(database, unified_entries, args, combined_path)
+        summaries = {
+            (result.firm_key, url): summary
+            for result in [*verified_results, *partial_results]
+            for url, summary in result.directory_summaries.items()
+        }
+        profile_output, profile_exit_code = refresh_profiles(database, unified_entries, args, combined_path, summaries)
 
     output = {
         "mode": "all",

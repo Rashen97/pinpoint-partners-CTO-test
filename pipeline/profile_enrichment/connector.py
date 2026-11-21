@@ -100,16 +100,7 @@ class ConfiguredHtmlProfileConnector(ProfileConnector):
             source_checked_at=datetime.now(timezone.utc).isoformat(),
             content_hash="",
         )
-        content = asdict(profile)
-        for key in (
-            "firm_key", "partner_entry_id", "name", "profile_url", "source_checked_at", "content_hash"
-        ):
-            del content[key]
-        canonical_text = json.dumps(content, sort_keys=True, ensure_ascii=False)
-        return replace(
-            profile,
-            content_hash=hashlib.sha256(canonical_text.encode("utf-8")).hexdigest(),
-        )
+        return with_content_hash(profile)
 
     @classmethod
     def _one(cls, soup: BeautifulSoup, spec: Any) -> str:
@@ -156,3 +147,11 @@ class ConfiguredHtmlProfileConnector(ProfileConnector):
     @staticmethod
     def _clean(value: Any) -> str:
         return " ".join(str(value or "").split())
+
+
+def with_content_hash(profile: PartnerProfileInfo) -> PartnerProfileInfo:
+    content = asdict(profile)
+    for key in ("firm_key", "partner_entry_id", "name", "profile_url", "source_checked_at", "content_hash"):
+        del content[key]
+    canonical_text = json.dumps(content, sort_keys=True, ensure_ascii=False)
+    return replace(profile, content_hash=hashlib.sha256(canonical_text.encode("utf-8")).hexdigest())

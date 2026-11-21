@@ -5,6 +5,7 @@ from pipeline.config import load_firms
 from pipeline.connectors import build_connector
 from pipeline.connectors.errors import UnexpectedResponseError
 from pipeline.connectors.paul_hastings import PaulHastingsConnector
+from pipeline.profile_enrichment.service import enrich_entries
 
 
 MA = "Mergers & Acquisitions"
@@ -18,6 +19,7 @@ def row(slug, practice, title="Partner"):
         "ph_professional_title_position": title,
         "ph_nested_practice_areas": [practice],
         "ph_nested_offices": ["London"],
+        "ph_teaser": "Advises on transactions.",
         "url": f"https://www.paulhastings.com/professionals/{slug}",
     }
 
@@ -59,6 +61,13 @@ class PaulHastingsTests(unittest.TestCase):
         self.assertEqual(result.records[0].role, "Global Managing Partner")
         self.assertEqual(result.records[1].practices, [MA, CAPITAL_MARKETS])
         self.assertEqual(result.records[-1].role, "Chair of the Firm")
+        profiles = Mock()
+        enrichment = enrich_entries(result.records, profiles, directory_summaries={
+            ("paul_hastings", url): summary for url, summary in result.directory_summaries.items()
+        })
+        self.assertEqual(len(enrichment.profiles), 4)
+        self.assertEqual(enrichment.profiles[0].biography, "Advises on transactions.")
+        profiles.enrich.assert_not_called()
 
     def test_rejects_duplicate_profiles_within_a_search(self):
         self.session.post.side_effect = [
@@ -78,6 +87,7 @@ class PaulHastingsTests(unittest.TestCase):
         with self.assertRaisesRegex(UnexpectedResponseError, "unconfirmed partner"):
             self.connector.extract()
 
-    def test_registered_but_disabled(self):
+    def test_registered_for_partial_publication(self):
         self.assertIsInstance(build_connector("paul_hastings", self.config), PaulHastingsConnector)
-        self.assertFalse(self.config["refresh_enabled"])
+        self.assertTrue(self.config["refresh_enabled"])
+        self.assertTrue(self.config["publish_partial_scope"])

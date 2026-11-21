@@ -23,6 +23,7 @@ class PaulHastingsConnector(Connector):
 
     def extract(self) -> ExtractionResult:
         records = []
+        summaries = {}
         pages = 0
         practices = self.config["practice_filters"]
         page_size = self.config["page_size"]
@@ -51,6 +52,9 @@ class PaulHastingsConnector(Connector):
                         raise UnexpectedResponseError(f"Paul Hastings {practice} repeated a profile at offset {offset}")
                     profiles.add(entry.profile_url)
                     records.append(entry)
+                    teaser = row.get("ph_teaser")
+                    if entry.profile_url not in summaries or not summaries[entry.profile_url]:
+                        summaries[entry.profile_url] = teaser if isinstance(teaser, str) and teaser.strip() else None
                 offset += len(rows)
                 pages += 1
 
@@ -64,6 +68,7 @@ class PaulHastingsConnector(Connector):
             scope_verified=False,
             covered_practices=list(practices),
             missing_practices=["Broader Corporate practice scope"],
+            directory_summaries=summaries,
         )
 
     def _fetch(self, practice, offset):

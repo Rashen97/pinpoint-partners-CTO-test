@@ -229,7 +229,9 @@ sullivan_cromwell:
   source_review: "The firm calls its Corporate group General Practice. Use that native filter and both explicit M&A filters, without an office restriction. Sort by record ID for stable pagination."
 
 paul_hastings:
-  refresh_enabled: false
+  refresh_enabled: true
+  publish_partial_scope: true
+  expected_partial_scope: true
   name: "Paul Hastings"
   directory_url: "https://www.paulhastings.com/professionals"
   filtered_url: "https://www.paulhastings.com/professionals?facets=ph_nested_practice_areas%3DMergers%2B%2526%2BAcquisitions"
@@ -244,7 +246,7 @@ paul_hastings:
   source_status: partial_scope
   practice_reference_url: "https://www.paulhastings.com/practices/mergers-and-acquisitions"
   source_review: "The public professionals widget reconciled to 86 M&A and 59 Capital Markets profiles with Partner selected and no office restriction."
-  notes: "Full Corporate scope and profile enrichment remain unverified. Regular refresh is disabled."
+  notes: "Partial refresh uses firm-written directory summaries. Full biographies are rate-limited and broader Corporate coverage remains unverified."
 
 skadden:
   refresh_enabled: true

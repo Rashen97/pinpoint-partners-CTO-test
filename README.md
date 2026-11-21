@@ -47,10 +47,14 @@ Firm websites
 Post-assessment, regular refreshes also include Weil with partial Corporate
 coverage across 17 directory filters, Latham & Watkins with partial coverage
 of M&A and Corporate Governance, King & Spalding with partial coverage
-across five Corporate capabilities, and Skadden with verified coverage
-across ten documented Corporate and M&A directory filters. Partial rosters can add
+across five Corporate capabilities, Paul Hastings with partial coverage of
+M&A and Capital Markets, and Skadden with verified coverage across ten
+documented Corporate and M&A directory filters. Partial rosters can add
 or update observed partners without inferring removals. The figures below
 record the submitted assessment baseline.
+
+Paul Hastings profiles use firm-written directory summaries. The firm’s full
+biography pages returned HTTP 429 to the refresh client.
 
 The submitted implementation supported seven enabled firms:
 

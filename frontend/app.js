@@ -206,7 +206,7 @@ async function openProfile(record) {
     }
     status.remove();
     for (const [label, value] of [
-      ["Biography", profile.biography],
+      [record.firm_key === "paul_hastings" ? "Directory summary" : "Biography", profile.biography],
       ["Email", profile.email],
       ["Telephone", profile.phone_numbers],
       ["Education", profile.education],
