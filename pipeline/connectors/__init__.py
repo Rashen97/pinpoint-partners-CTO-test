@@ -12,6 +12,7 @@ from pipeline.connectors.king_spalding import KingSpaldingConnector
 from pipeline.connectors.kirkland import KirklandConnector
 from pipeline.connectors.latham_watkins import LathamWatkinsConnector
 from pipeline.connectors.milbank import MilbankConnector
+from pipeline.connectors.paul_hastings import PaulHastingsConnector
 from pipeline.connectors.paul_weiss import PaulWeissConnector
 from pipeline.connectors.quinn_emanuel import QuinnEmanuelConnector
 from pipeline.connectors.simpson_thacher import SimpsonThacherConnector
@@ -29,6 +30,7 @@ CONNECTORS: dict[str, type[Connector]] = {
     "kirkland": KirklandConnector,
     "latham_watkins": LathamWatkinsConnector,
     "milbank": MilbankConnector,
+    "paul_hastings": PaulHastingsConnector,
     "paul_weiss": PaulWeissConnector,
     "quinn_emanuel": QuinnEmanuelConnector,
     "simpson_thacher": SimpsonThacherConnector,

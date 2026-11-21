@@ -233,11 +233,18 @@ paul_hastings:
   name: "Paul Hastings"
   directory_url: "https://www.paulhastings.com/professionals"
   filtered_url: "https://www.paulhastings.com/professionals?facets=ph_nested_practice_areas%3DMergers%2B%2526%2BAcquisitions"
-  results_url: null
-  source_status: directory_found
+  results_url: "https://discover.sitecorecloud.io/discover/v2/135344240"
+  method: POST
+  type: json
+  page_size: 10
+  request_interval_seconds: 2
+  practice_filters:
+    - "Mergers & Acquisitions"
+    - "Capital Markets"
+  source_status: partial_scope
   practice_reference_url: "https://www.paulhastings.com/practices/mergers-and-acquisitions"
-  source_review: "The official directory showed a loading shell in web review. The M&A facet is known, but its results feed, broader Corporate mapping, Partner filter and pagination need verification."
-  notes: "M&A facet is in the URL. Check the Partner filter and next-page request."
+  source_review: "The public professionals widget reconciled to 86 M&A and 59 Capital Markets profiles with Partner selected and no office restriction."
+  notes: "Full Corporate scope and profile enrichment remain unverified. Regular refresh is disabled."
 
 skadden:
   refresh_enabled: true
