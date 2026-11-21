@@ -266,15 +266,36 @@ skadden:
   notes: "Scope comprises Corporate, Skadden's published M&A grouping, Capital Markets, Corporate Restructuring and Finance. A failed practice search blocks publication."
 
 king_spalding:
-  refresh_enabled: false
+  refresh_enabled: true
+  publish_partial_scope: true
+  expected_partial_scope: true
   name: "King & Spalding"
   directory_url: "https://www.kslaw.com/people"
   filtered_url: "https://www.kslaw.com/search?filter_capability=Mergers+%26+Acquisitions+%28M%26A%29&section=people"
-  results_url: null
-  source_status: directory_found
+  results_url: "https://www.kslaw.com/api/search"
+  method: POST
+  type: json
+  page_size: 12
+  request_interval_seconds: 2
+  capability_filters:
+    - "Mergers & Acquisitions (M&A)"
+    - "Capital Markets"
+    - "Private Equity"
+    - "Public Companies Advisory"
+    - "Emerging Companies & Venture Capital"
+  partner_titles:
+    - "Partner"
+    - "Managing Partner Atlanta Office"
+    - "Partner / Chairman, Saudi Arabia Practice"
+    - "Partner / Chief Human Resources Officer"
+    - "Partner / Chief Operating Officer"
+    - "Partner / Director of eDiscovery Operations"
+    - "Partner / General Counsel"
+    - "Partner-Pro Bono"
+  source_status: partial_scope
   practice_reference_url: "https://www.kslaw.com/capabilities/mergers-acquisitions-m-a"
-  source_review: "The M&A capability and its people search are useful entry points. Verify the Corporate practice mapping and the Partner results across all offices."
-  notes: "Official M&A View All link. A zero-result shell is not evidence of an empty roster."
+  source_review: "Five Corporate-related capabilities returned 130 distinct partner profiles across 23 pages with no office restriction."
+  notes: "The full Corporate practice group roster remains unverified."
 
 weil:
   refresh_enabled: true

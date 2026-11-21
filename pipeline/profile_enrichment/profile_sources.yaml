@@ -69,3 +69,8 @@ latham_watkins:
   selectors:
     name: "h1.hero-people-detail__name"
     biography: "#profile .field-bioprofile"
+
+king_spalding:
+  selectors:
+    name: ".bio-page-hero.screen-only h1.bio-page-hero__header"
+    biography: "main.kslaw-bio .expandable-copy-block__copy:has(> p)"

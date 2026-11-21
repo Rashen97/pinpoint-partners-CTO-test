@@ -46,8 +46,9 @@ Firm websites
 
 Post-assessment, regular refreshes also include Weil with partial Corporate
 coverage across 17 directory filters, Latham & Watkins with partial coverage
-of M&A and Corporate Governance, and Skadden with verified coverage across
-ten documented Corporate and M&A directory filters. Partial rosters can add
+of M&A and Corporate Governance, King & Spalding with partial coverage
+across five Corporate capabilities, and Skadden with verified coverage
+across ten documented Corporate and M&A directory filters. Partial rosters can add
 or update observed partners without inferring removals. The figures below
 record the submitted assessment baseline.
 
@@ -251,8 +252,8 @@ Open the [partner directory](http://127.0.0.1:8080/). It connects to the API on 
 
 The coverage indicator shows verified firms and partial coverage separately.
 The assessment check found six verified firms and one partial firm, Gibson
-Dunn. A subsequent successful refresh can also publish Weil and Latham
-as partial and Skadden as verified within its documented scope.
+Dunn. A subsequent successful refresh can also publish Weil, Latham, and
+King & Spalding as partial and Skadden as verified within its documented scope.
 Wachtell’s browser capture could be parsed, but the live runner received
 HTTP 403, so Wachtell is disabled. See the [assessment review](ASSESSMENT_REVIEW.md#coverage-by-firm) for the evidence.
 
