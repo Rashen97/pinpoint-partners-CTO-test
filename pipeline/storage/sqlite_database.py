@@ -134,16 +134,24 @@ class SQLiteDatabase:
     def load_all_partner_entries(self, *, missing_profiles_for: str | None = None) -> list[PartnerEntryInfo]:
         query = f"SELECT {ENTRY_SELECT} FROM partner_entries_all WHERE no_longer_listed_at IS NULL"
         parameters = ()
+        order_by = "firm_key, name COLLATE NOCASE"
         if missing_profiles_for is not None:
             query += (
                 " AND firm_key = ? AND NOT EXISTS (SELECT 1 FROM partner_profiles_all "
                 "WHERE partner_profiles_all.partner_entry_id = partner_entries_all.partner_entry_id)"
             )
             parameters = (missing_profiles_for,)
+            order_by = (
+                "EXISTS (SELECT 1 FROM partner_profile_failures_all AS failure "
+                "WHERE failure.firm_key = partner_entries_all.firm_key "
+                "AND failure.profile_url = partner_entries_all.profile_url "
+                "AND failure.error LIKE 'Profile parser found no biography at %'), "
+                + order_by
+            )
         with closing(sqlite3.connect(self.path)) as connection:
             connection.row_factory = sqlite3.Row
             rows = connection.execute(
-                query + " ORDER BY firm_key, name COLLATE NOCASE", parameters
+                query + " ORDER BY " + order_by, parameters
             ).fetchall()
         entries = []
         for row in rows:
