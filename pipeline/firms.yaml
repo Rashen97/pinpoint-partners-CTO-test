@@ -34,8 +34,8 @@ kirkland:
     - Partner
   scope_verified: false
   source_status: endpoint_failed
-  source_review: "The official directory exposes Practice, Level, Office, and See More in web review, but a direct directory request returned HTTP 403. The connector previously received a server error from the results endpoint."
-  notes: "Captured letter examples only. Confirm GET, Corporate/M&A filters, and pagination."
+  source_review: "The Corporate Governance browser capture showed a POST with practice, level, and page query parameters. Page 3 returned 10 distinct Partner URLs in Results and TotalSearchResults of 68. Rows omit practice labels, so capture scope comes from the request filter. A direct replay from the pipeline host returned HTTP 403."
+  notes: "Manual directory check on 2026-11-23 with Level set to Partner and Office unrestricted reported 518 for Mergers & Acquisitions and 68 for Corporate Governance. Use these point-in-time totals to check each filter's pagination before deduplicating across practices."
 
 wachtell_lipton:
   refresh_enabled: false
@@ -93,14 +93,14 @@ davis_polk:
   notes: "All 22 published Corporate groups were verified across 76 requests for team pages, including the Environmental zero-Partner check. The Algolia URL is historical discovery evidence."
 
 simpson_thacher:
-  refresh_enabled: false
+  refresh_enabled: true
   name: "Simpson Thacher & Bartlett"
   directory_url: "https://www.stblaw.com/our-team/"
   results_url: "https://www.stblaw.com/wp-json/stb/v1/staff-listing"
   method: GET
   type: json
   partner_position_id: "7972"
-  request_interval_seconds: 3.5
+  request_interval_seconds: 5
   practice_page_filters:
     - {label: Corporate, id: "102726"}
     - {label: "Mergers and Acquisitions", id: "103036"}

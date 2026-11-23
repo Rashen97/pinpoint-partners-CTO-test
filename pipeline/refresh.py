@@ -73,6 +73,11 @@ def parse_args() -> argparse.Namespace:
         help="Stop after directory extraction (development/debugging only)",
     )
     parser.add_argument(
+        "--resume-profiles",
+        action="store_true",
+        help="Enrich missing profiles for one firm from the saved roster",
+    )
+    parser.add_argument(
         "--profile-limit",
         type=int,
         help="Only enrich the first N profiles eligible for publication in this run",
@@ -80,6 +85,10 @@ def parse_args() -> argparse.Namespace:
     args = parser.parse_args()
     if args.publish_partial and not args.firm:
         parser.error("--publish-partial requires --firm")
+    if args.resume_profiles and (not args.firm or args.directory_only or args.publish_partial or args.include_unverified_scope):
+        parser.error("--resume-profiles requires --firm and cannot be combined with directory refresh options")
+    if args.resume_profiles and args.profile_limit is not None and args.profile_limit < 1:
+        parser.error("--profile-limit must be positive when resuming profiles")
     return args
 
 
@@ -151,14 +160,19 @@ def refresh_profiles(
     if args.directory_only:
         return {"status": "skipped", "reason": "--directory-only", "source": source, "database": None}, 0
     profile_connector = ConfiguredHtmlProfileConnector(load_profile_sources())
+    cooldowns = database.profile_enrichment_cooldowns()
+    deferred = {entry.firm_key: cooldowns[entry.firm_key] for entry in entries if entry.firm_key in cooldowns}
+    eligible = [entry for entry in entries if entry.firm_key not in deferred]
     enrichment = enrich_entries(
-        entries, profile_connector, limit=args.profile_limit, directory_summaries=directory_summaries,
+        eligible, profile_connector, limit=args.profile_limit, directory_summaries=directory_summaries,
     )
     profiles_path = database.save_all_partner_profiles(
-        enrichment.profiles, enrichment.failures, firm_key=args.firm
+        enrichment.profiles, enrichment.failures, firm_key=args.firm,
+        preserve_unattempted_failures=getattr(args, "resume_profiles", False) or bool(deferred or enrichment.retry_times),
+        retry_times=enrichment.retry_times,
     )
     return {
-        "status": "partial" if enrichment.failures else "complete",
+        "status": "deferred" if deferred and not eligible else "partial" if enrichment.failures or deferred else "complete",
         "source": source,
         "database": str(profiles_path),
         "failures_table": "partner_profile_failures_all",
@@ -166,7 +180,9 @@ def refresh_profiles(
         "attempted_count": len(enrichment.profiles) + len(enrichment.failures),
         "profile_count": len(enrichment.profiles),
         "failure_count": len(enrichment.failures),
-    }, 3 if enrichment.failures else 0
+        "rate_limited_firms": sorted(enrichment.retry_times),
+        "retry_at": {**deferred, **enrichment.retry_times},
+    }, 3 if enrichment.failures or deferred else 0
 
 
 def main() -> int:
@@ -187,6 +203,11 @@ def main() -> int:
             raise SystemExit("No refresh-enabled firms are configured")
 
     database = SQLiteDatabase()
+    if getattr(args, "resume_profiles", False):
+        entries = database.load_all_partner_entries(missing_profiles_for=args.firm)
+        output, code = refresh_profiles(database, entries, args, "partner_entries_all")
+        print(json.dumps(output, indent=2, ensure_ascii=False))
+        return code
     firm_payloads: dict[str, dict[str, Any]] = {}
     verified_results: list[ExtractionResult] = []
     partial_results: list[ExtractionResult] = []

@@ -36,10 +36,11 @@ paul_weiss:
     languages: ".languages-block .detail-item"
 
 simpson_thacher:
+  request_interval_seconds: 5
   selectors:
     name: ".hero-area-name h1"
     role: ".hero-area-title"
-    biography: ".bio-content"
+    biography: "main .tab-item:first-child .wp-block-stb-bullet__rich-text.full-content, .bio-content"
     practices: "#bioRightColPracticeFocus .bio-right-tagged-item"
     phone_numbers:
       selector: ".hero-area-phone a[href^='tel:']"

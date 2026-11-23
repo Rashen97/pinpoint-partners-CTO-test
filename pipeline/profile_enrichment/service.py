@@ -3,9 +3,10 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
+from email.utils import parsedate_to_datetime
 
-from pipeline.connectors.errors import UnexpectedResponseError
+from pipeline.connectors.errors import ProfileRateLimitError, UnexpectedResponseError
 from pipeline.models import PartnerEntryInfo, PartnerProfileInfo
 from pipeline.profile_enrichment.base import ProfileConnector
 from pipeline.profile_enrichment.connector import with_content_hash
@@ -22,6 +23,21 @@ class ProfileEnrichmentFailure:
 class ProfileEnrichmentResult:
     profiles: list[PartnerProfileInfo] = field(default_factory=list)
     failures: list[ProfileEnrichmentFailure] = field(default_factory=list)
+    retry_times: dict[str, str] = field(default_factory=dict)
+
+
+def retry_time(retry_after: str | None, now: datetime) -> str:
+    if retry_after:
+        try:
+            if retry_after.isascii() and retry_after.isdecimal():
+                return (now + timedelta(seconds=int(retry_after))).isoformat(timespec="microseconds")
+            retry_at = parsedate_to_datetime(retry_after)
+            if retry_at.tzinfo is None:
+                retry_at = retry_at.replace(tzinfo=timezone.utc)
+            return max(now, retry_at.astimezone(timezone.utc)).isoformat(timespec="microseconds")
+        except (ValueError, OverflowError):
+            pass
+    return (now + timedelta(minutes=30)).isoformat(timespec="microseconds")
 
 
 def enrich_entries(
@@ -35,11 +51,15 @@ def enrich_entries(
     result = ProfileEnrichmentResult()
     summaries = directory_summaries or {}
     for entry in selected:
+        if entry.firm_key in result.retry_times:
+            continue
         try:
             key = (entry.firm_key, entry.profile_url)
             profile = _directory_profile(entry, summaries[key]) if key in summaries else connector.enrich(entry)
             result.profiles.append(profile)
         except Exception as exc:
+            if isinstance(exc, ProfileRateLimitError):
+                result.retry_times[entry.firm_key] = retry_time(exc.retry_after, datetime.now(timezone.utc))
             result.failures.append(
                 ProfileEnrichmentFailure(
                     firm_key=entry.firm_key,
