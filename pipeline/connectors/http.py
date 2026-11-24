@@ -10,7 +10,7 @@ from urllib3.util.retry import Retry
 DEFAULT_TIMEOUT_SECONDS = 20
 
 
-def build_session() -> requests.Session:
+def build_session(*, retry_rate_limits: bool = True) -> requests.Session:
     session = requests.Session()
     session.headers.update(
         {
@@ -27,7 +27,8 @@ def build_session() -> requests.Session:
         read=2,
         status=2,
         backoff_factor=0.5,
-        status_forcelist=(429, 500, 502, 503, 504),
+        status_forcelist=(429, 500, 502, 503, 504) if retry_rate_limits else (500, 502, 503, 504),
+        respect_retry_after_header=retry_rate_limits,
         allowed_methods=frozenset({"GET"}),
     )
     session.mount("https://", HTTPAdapter(max_retries=retries))

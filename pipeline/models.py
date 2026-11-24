@@ -64,3 +64,4 @@ class ExtractionResult:
     covered_practices: list[str] = field(default_factory=list)
     missing_practices: list[str] = field(default_factory=list)
     warnings: list[str] = field(default_factory=list)
+    directory_summaries: dict[str, str | None] = field(default_factory=dict)

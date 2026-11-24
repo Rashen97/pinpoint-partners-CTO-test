@@ -36,10 +36,11 @@ paul_weiss:
     languages: ".languages-block .detail-item"
 
 simpson_thacher:
+  request_interval_seconds: 5
   selectors:
     name: ".hero-area-name h1"
     role: ".hero-area-title"
-    biography: ".bio-content"
+    biography: "main .tab-item:first-child .wp-block-stb-bullet__rich-text.full-content, .bio-content"
     practices: "#bioRightColPracticeFocus .bio-right-tagged-item"
     phone_numbers:
       selector: ".hero-area-phone a[href^='tel:']"
@@ -54,3 +55,23 @@ quinn_emanuel:
 sullivan_cromwell:
   selectors:
     biography: "#main_bio_container .main-bio-version"
+
+weil:
+  selectors:
+    name: ".header-b h1"
+    biography: ".bio-top .intro"
+
+skadden:
+  selectors:
+    name: "h1.profile-header-name"
+    biography: "#about .overview-wrapper"
+
+latham_watkins:
+  selectors:
+    name: "h1.hero-people-detail__name"
+    biography: "#profile .field-bioprofile"
+
+king_spalding:
+  selectors:
+    name: ".bio-page-hero.screen-only h1.bio-page-hero__header"
+    biography: "main.kslaw-bio .expandable-copy-block__copy:has(> p)"

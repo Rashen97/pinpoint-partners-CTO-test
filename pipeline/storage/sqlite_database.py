@@ -131,12 +131,27 @@ class SQLiteDatabase:
             )
         return "partner_entries_all"
 
-    def load_all_partner_entries(self) -> list[PartnerEntryInfo]:
+    def load_all_partner_entries(self, *, missing_profiles_for: str | None = None) -> list[PartnerEntryInfo]:
+        query = f"SELECT {ENTRY_SELECT} FROM partner_entries_all WHERE no_longer_listed_at IS NULL"
+        parameters = ()
+        order_by = "firm_key, name COLLATE NOCASE"
+        if missing_profiles_for is not None:
+            query += (
+                " AND firm_key = ? AND NOT EXISTS (SELECT 1 FROM partner_profiles_all "
+                "WHERE partner_profiles_all.partner_entry_id = partner_entries_all.partner_entry_id)"
+            )
+            parameters = (missing_profiles_for,)
+            order_by = (
+                "EXISTS (SELECT 1 FROM partner_profile_failures_all AS failure "
+                "WHERE failure.firm_key = partner_entries_all.firm_key "
+                "AND failure.profile_url = partner_entries_all.profile_url "
+                "AND failure.error LIKE 'Profile parser found no biography at %'), "
+                + order_by
+            )
         with closing(sqlite3.connect(self.path)) as connection:
             connection.row_factory = sqlite3.Row
             rows = connection.execute(
-                f"SELECT {ENTRY_SELECT} FROM partner_entries_all "
-                "WHERE no_longer_listed_at IS NULL ORDER BY firm_key, name COLLATE NOCASE"
+                query + " ORDER BY " + order_by, parameters
             ).fetchall()
         entries = []
         for row in rows:
@@ -152,7 +167,13 @@ class SQLiteDatabase:
         failures: list[ProfileEnrichmentFailure],
         *,
         firm_key: str | None = None,
+        preserve_unattempted_failures: bool = False,
+        retry_times: dict[str, str] | None = None,
     ) -> str:
+        retry_times = retry_times or {}
+        checked_at = datetime.now(timezone.utc).isoformat(timespec="microseconds")
+        failed_firms = {failure.firm_key for failure in failures}
+        attempted_firms = failed_firms | {profile.firm_key for profile in profiles}
         with self._transaction() as connection:
             current_ids = {
                 row[0] for row in connection.execute(
@@ -162,7 +183,12 @@ class SQLiteDatabase:
             }
             records = [asdict(profile) for profile in profiles if profile.partner_entry_id in current_ids]
             self._insert(connection, "partner_profiles_all", PROFILE_COLUMNS, records, upsert=True)
-            if firm_key is None:
+            if preserve_unattempted_failures:
+                connection.executemany(
+                    "DELETE FROM partner_profile_failures_all WHERE firm_key = ? AND profile_url = ?",
+                    [(item.firm_key, item.profile_url) for item in [*profiles, *failures]],
+                )
+            elif firm_key is None:
                 connection.execute("DELETE FROM partner_profile_failures_all")
             else:
                 connection.execute(
@@ -174,7 +200,36 @@ class SQLiteDatabase:
                 ("firm_key", "profile_url", "error"),
                 [asdict(failure) for failure in failures],
             )
+            connection.executemany(
+                """
+                INSERT INTO profile_enrichment_status (firm_key, status, checked_at, retry_at)
+                VALUES (?, ?, ?, ?)
+                ON CONFLICT(firm_key) DO UPDATE SET
+                    status = excluded.status,
+                    checked_at = excluded.checked_at,
+                    retry_at = excluded.retry_at
+                WHERE profile_enrichment_status.retry_at IS NULL
+                   OR profile_enrichment_status.retry_at <= excluded.checked_at
+                   OR profile_enrichment_status.retry_at < excluded.retry_at
+                """,
+                [
+                    (
+                        firm,
+                        "rate_limited" if firm in retry_times else "partial" if firm in failed_firms else "complete",
+                        checked_at,
+                        retry_times.get(firm),
+                    )
+                    for firm in attempted_firms
+                ],
+            )
         return "partner_profiles_all"
+
+    def profile_enrichment_cooldowns(self) -> dict[str, str]:
+        now = datetime.now(timezone.utc).isoformat(timespec="microseconds")
+        with closing(sqlite3.connect(self.path)) as connection:
+            return dict(connection.execute(
+                "SELECT firm_key, retry_at FROM profile_enrichment_status WHERE retry_at > ?", (now,)
+            ))
 
     @staticmethod
     def _firm_table(prefix: str, firm_key: str) -> str:
