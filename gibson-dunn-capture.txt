@@ -1,0 +1,17 @@
+Gibson Dunn People directory
+https://www.gibsondunn.com/people/
+
+First request:
+POST https://www.gibsondunn.com/?wpgb-ajax=refresh&_people_practices=mergers-and-acquisitions&_people_title=000_partner
+
+Load more request:
+POST https://www.gibsondunn.com/?wpgb-ajax=refresh&_people_practices=mergers-and-acquisitions&_people_title=000_partner&_people_load_more=20
+
+Both requests sent multipart form data with a wpgb field containing:
+{"id":"archivePeople","is_template":true,"is_main_query":false,"main_query":[],"permalink":"https://www.gibsondunn.com/people/","lang":"","facets":[20,24,10,42,43,17,18,35,36,37,38,6,11,33,34]}
+
+Both responses returned HTTP 200, reported total=191, and included HTML for
+20 cards in the posts field. Both echoed the selected practice and title.
+The second also echoed people_load_more=["20"]. No location filter was sent.
+The capture covers two batches. Card identities and final-page behaviour
+were not recorded.
