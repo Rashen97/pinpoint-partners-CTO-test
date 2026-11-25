@@ -1,6 +1,7 @@
 import json
 import sqlite3
 
+from backend.app.db.office_labels import normalise_offices
 from backend.app.schemas.partners import (
     PartnerDirectory,
     PartnerEntry,
@@ -28,9 +29,12 @@ def list_directory(connection: sqlite3.Connection) -> PartnerDirectory:
     records = []
     for row in rows:
         values = dict(row)
-        for field in ("offices", "practices"):
-            roster_value = values.pop(f"roster_{field}")
-            values[field] = json.loads(values[field]) or json.loads(roster_value)
+        roster_offices = values.pop("roster_offices")
+        roster_practices = values.pop("roster_practices")
+        values["offices"] = normalise_offices(json.loads(values["offices"])) or normalise_offices(
+            json.loads(roster_offices)
+        )
+        values["practices"] = json.loads(values["practices"]) or json.loads(roster_practices)
         records.append(PartnerEntry.model_validate(values))
 
     verified_firm_count, partial_firm_count = connection.execute(
