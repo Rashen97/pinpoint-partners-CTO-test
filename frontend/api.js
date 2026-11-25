@@ -24,8 +24,9 @@ const demoRecords = [
 export function createDirectoryApi(baseUrl) {
   const base = baseUrl.trim().replace(/\/+$/, "");
 
-  async function request(path, allowMissing = false) {
+  async function request(path, { allowMissing = false, method = "GET" } = {}) {
     const response = await fetch(`${base}${path}`, {
+      method,
       headers: { Accept: "application/json" },
     });
     if (allowMissing && response.status === 404) return null;
@@ -47,7 +48,11 @@ export function createDirectoryApi(baseUrl) {
     },
     async profile(id) {
       if (!base) return null;
-      return request(`/partners/${encodeURIComponent(id)}`, true);
+      return request(`/partners/${encodeURIComponent(id)}`, { allowMissing: true });
+    },
+    async callBrief(id) {
+      if (!base) return null;
+      return request(`/partners/${encodeURIComponent(id)}/call-brief`, { method: "POST" });
     },
   };
 }

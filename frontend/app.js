@@ -175,6 +175,50 @@ function profileResearch(record) {
   return section;
 }
 
+function profileCallBrief(record, request) {
+  const section = element("section", "", "profile-brief");
+  const button = element("button", "Prepare for a call", "research-submit brief-button");
+  button.type = "button";
+  const status = element("p", "", "brief-status");
+  status.setAttribute("role", "status");
+  const result = element("div", "", "brief-result");
+  section.append(button, status, result);
+  button.addEventListener("click", async () => {
+    button.disabled = true;
+    button.setAttribute("aria-busy", "true");
+    status.textContent = "Preparing call brief…";
+    try {
+      const brief = await api.callBrief(record.partner_entry_id);
+      if (request !== profileRequest || !dialog.open) return;
+      const sections = [
+        ["Partner at a glance", brief.at_a_glance],
+        ["Conversation starters", brief.conversation_starters],
+        ["What to verify", brief.what_to_verify],
+      ];
+      for (const [label, items] of sections) {
+        if (!items.length) continue;
+        const list = element("ul");
+        list.append(...items.map((item) => element("li", item)));
+        result.append(element("h4", label), list);
+      }
+      const link = sourceLink(brief.source_url, "Read the source firm profile");
+      if (link) result.append(link);
+      result.classList.add("brief-result-ready");
+      status.textContent = "Call brief ready.";
+      button.textContent = "Call brief generated";
+    } catch {
+      if (request !== profileRequest || !dialog.open) return;
+      result.replaceChildren();
+      status.textContent = "Could not generate the call brief. You can retry or use the research links.";
+      button.textContent = "Retry call brief";
+      button.disabled = false;
+    } finally {
+      button.removeAttribute("aria-busy");
+    }
+  });
+  return section;
+}
+
 async function openProfile(record) {
   const request = ++profileRequest;
   const content = byId("profile-content");
@@ -193,6 +237,7 @@ async function openProfile(record) {
   content.replaceChildren(title, element("p", record.role), overview);
   const link = sourceLink(record.profile_url);
   if (link) content.append(link);
+  if (!api.demo) content.append(profileCallBrief(record, request));
   content.append(profileResearch(record), status);
   dialog.showModal();
   if (api.demo) return;

@@ -83,6 +83,48 @@ dialog::backdrop { background: #15151d80; }
 #profile-content dt { font-weight: 650; }
 #profile-content dd { margin: 0; }
 .profile-research { margin-block: 22px; padding: 16px; border: 1px solid var(--line); border-radius: 8px; background: #f7f7f8; }
+.profile-brief { position: relative; margin-block: 22px; padding: 16px; border: 1px solid var(--line); border-radius: 8px; }
+.profile-brief h4 { margin: 16px 0 4px; }
+.profile-brief ul { margin: 0 0 12px; padding-inline-start: 22px; }
+.profile-brief li + li { margin-top: 4px; }
+.brief-status:empty { display: none; }
+.brief-button[aria-busy="true"] { opacity: 1; cursor: progress; background: #292441; }
+.profile-brief:has(.brief-button[aria-busy="true"])::before,
+.profile-brief:has(.brief-button[aria-busy="true"])::after {
+  content: "";
+  position: absolute;
+  inset: -2px;
+  padding: 2px;
+  border-radius: 10px;
+  pointer-events: none;
+  background: linear-gradient(120deg, #37b9bf, #7698f6, #ae80ee, #e78dbd);
+  mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  mask-composite: exclude;
+  animation: brief-wave 1.8s ease-out infinite;
+}
+.profile-brief:has(.brief-button[aria-busy="true"])::after { animation-delay: -.9s; }
+.brief-result-ready { animation: brief-reveal 280ms ease-out both; }
+.brief-result-ready::before {
+  content: "";
+  display: block;
+  width: min(100%, 140px);
+  height: 3px;
+  border-radius: 2px;
+  background: linear-gradient(90deg, #37aeb3, #6c92f1, #a77ae8, #de86bd);
+}
+@keyframes brief-wave {
+  from { inset: -2px; opacity: .9; }
+  to { inset: -12px; opacity: 0; }
+}
+@keyframes brief-reveal {
+  from { opacity: 0; transform: translateY(5px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .profile-brief:has(.brief-button[aria-busy="true"])::before,
+  .brief-result-ready { animation: none; }
+  .profile-brief:has(.brief-button[aria-busy="true"])::after { display: none; }
+}
 #profile-content .profile-research h3 { margin: 0 0 12px; }
 .profile-research label { display: grid; gap: 6px; font-size: .875rem; font-weight: 650; }
 .research-topics { display: flex; flex-wrap: wrap; gap: 4px 10px; margin-block: 8px; }
