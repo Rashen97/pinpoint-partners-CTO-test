@@ -25,15 +25,30 @@ class RosterCoverage(BaseModel):
 class RosterChange(BaseModel):
     name: str
     firm_name: str
-    kind: Literal["newly_listed", "no_longer_listed"]
+    kind: Literal["newly_listed", "no_longer_listed", "relisted"]
     observed_at: date | datetime
     source_url: str | None = None
+
+
+class PartnerMove(BaseModel):
+    departure_event_id: int
+    addition_event_id: int
+    name: str
+    from_firm: str
+    to_firm: str
+    observed_at: date | datetime
+    from_source_url: str
+    to_source_url: str
+    status: Literal["possible", "confirmed"]
+    evidence_url: str | None = None
+    effective_on: date | None = None
 
 
 class PartnerDirectory(BaseModel):
     records: list[PartnerEntry]
     coverage: RosterCoverage | None = None
     changes: list[RosterChange] | None = None
+    moves: list[PartnerMove] = Field(default_factory=list)
 
 
 class PartnerProfile(BaseModel):

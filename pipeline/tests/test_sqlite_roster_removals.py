@@ -34,9 +34,14 @@ class SQLiteRosterRemovalTests(unittest.TestCase):
                     ).fetchone()[0]
 
                 self.assertEqual(preview_scope(), 0)
+                self.assertEqual(connection.execute("SELECT COUNT(*) FROM partner_roster_events").fetchone()[0], 0)
                 database.save_all_partner_entries([replace(full, records=[verified, preview])])
                 database.save_partial_partner_entries(partial)
                 self.assertEqual(preview_scope(), 1)
+                self.assertEqual(
+                    connection.execute("SELECT partner_entry_id, kind, source_url FROM partner_roster_events").fetchall(),
+                    [(preview.partner_entry_id, "newly_listed", preview.profile_url)],
+                )
 
     def test_verified_omission_preserves_profile_and_reappearance_reactivates(self):
         partner = entry()
@@ -79,3 +84,9 @@ class SQLiteRosterRemovalTests(unittest.TestCase):
                 database.save_all_partner_entries([full])
                 self.assertIsNone(removal_date())
                 self.assertCountEqual(database.load_all_partner_entries(), full.records)
+                self.assertEqual(
+                    connection.execute(
+                        "SELECT partner_entry_id, kind FROM partner_roster_events ORDER BY event_id"
+                    ).fetchall(),
+                    [(partner.partner_entry_id, "no_longer_listed"), (partner.partner_entry_id, "relisted")],
+                )

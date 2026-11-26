@@ -4,10 +4,12 @@ import sqlite3
 from backend.app.schemas.partners import (
     PartnerDirectory,
     PartnerEntry,
+    PartnerMove,
     PartnerProfile,
     RosterChange,
     RosterCoverage,
 )
+from pipeline.storage.partner_moves import list_partner_moves
 
 TARGET_FIRM_COUNT = 15
 
@@ -42,16 +44,7 @@ def list_directory(connection: sqlite3.Connection) -> PartnerDirectory:
         WHERE no_longer_listed_at IS NULL
         """
     ).fetchone()
-    changes = [
-        RosterChange(kind="no_longer_listed", **dict(row))
-        for row in connection.execute(
-            """
-            SELECT name, firm_name, no_longer_listed_at AS observed_at, source_url
-            FROM partner_entries_all
-            WHERE no_longer_listed_at IS NOT NULL
-            """
-        )
-    ]
+    changes = _list_roster_changes(connection)
     return PartnerDirectory(
         records=records,
         coverage=RosterCoverage(
@@ -60,7 +53,31 @@ def list_directory(connection: sqlite3.Connection) -> PartnerDirectory:
             target_firm_count=TARGET_FIRM_COUNT,
         ),
         changes=changes if verified_firm_count or changes else None,
+        moves=[PartnerMove.model_validate(move) for move in list_partner_moves(connection)],
     )
+
+
+def _list_roster_changes(connection: sqlite3.Connection) -> list[RosterChange]:
+    if connection.execute(
+        "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'partner_roster_events'"
+    ).fetchone():
+        rows = connection.execute(
+            """
+            SELECT name, firm_name, kind, observed_at, source_url
+            FROM partner_roster_events
+            ORDER BY observed_at DESC, event_id DESC
+            """
+        )
+    else:
+        rows = connection.execute(
+            """
+            SELECT name, firm_name, 'no_longer_listed' AS kind,
+                   no_longer_listed_at AS observed_at, source_url
+            FROM partner_entries_all
+            WHERE no_longer_listed_at IS NOT NULL
+            """
+        )
+    return [RosterChange(**dict(row)) for row in rows]
 
 
 def find_profile(connection: sqlite3.Connection, partner_entry_id: str) -> PartnerProfile | None:

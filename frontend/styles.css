@@ -91,7 +91,7 @@ dialog::backdrop { background: #15151d80; }
 .changes-card { padding: 22px; border: 1px solid var(--line); border-radius: 10px; background: white; }
 #changes-status { color: var(--muted); }
 #changes-status:empty, #changes-list:empty { display: none; }
-#changes-list, #sample-changes-list { list-style: none; margin: 16px 0 0; padding: 0; }
+#changes-list, #sample-changes-list, #partner-moves-list { list-style: none; margin: 16px 0 0; padding: 0; }
 .changes-card li { display: grid; gap: 5px; padding-block: 13px; border-top: 1px solid var(--line); }
 .changes-card li span, .changes-card li a { font-size: .875rem; }
 .changes-card li span { color: var(--muted); }

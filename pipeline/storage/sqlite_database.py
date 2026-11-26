@@ -94,6 +94,7 @@ class SQLiteDatabase:
             )
             self._insert(connection, "next_entries", ENTRY_COLUMNS, records)
             listed_at = datetime.now(timezone.utc).isoformat()
+            self._record_roster_events(connection, listed_at)
             connection.executemany(
                 """
                 UPDATE partner_entries_all
@@ -111,7 +112,36 @@ class SQLiteDatabase:
                 [dict(record, no_longer_listed_at=None, scope_verified=True) for record in records],
                 upsert=True,
             )
+            connection.execute(
+                "INSERT OR IGNORE INTO firm_roster_baselines (firm_key) "
+                "SELECT DISTINCT firm_key FROM next_entries"
+            )
         return "partner_entries_all"
+
+    @staticmethod
+    def _record_roster_events(connection: sqlite3.Connection, listed_at: str) -> None:
+        connection.execute(
+            """
+            INSERT INTO partner_roster_events (
+                partner_entry_id, firm_key, firm_name, name, kind, observed_at, source_url
+            )
+            SELECT incoming.partner_entry_id, incoming.firm_key, incoming.firm_name, incoming.name,
+                   CASE WHEN prior.scope_verified = 1 THEN 'relisted' ELSE 'newly_listed' END,
+                   ?, incoming.profile_url
+            FROM next_entries AS incoming
+            JOIN firm_roster_baselines AS baseline ON baseline.firm_key = incoming.firm_key
+            LEFT JOIN partner_entries_all AS prior ON prior.partner_entry_id = incoming.partner_entry_id
+            WHERE prior.scope_verified IS NOT 1 OR prior.no_longer_listed_at IS NOT NULL
+            UNION ALL
+            SELECT prior.partner_entry_id, prior.firm_key, prior.firm_name, prior.name,
+                   'no_longer_listed', ?, prior.source_url
+            FROM partner_entries_all AS prior
+            WHERE prior.scope_verified = 1 AND prior.no_longer_listed_at IS NULL
+              AND prior.firm_key IN (SELECT firm_key FROM next_entries)
+              AND prior.partner_entry_id NOT IN (SELECT partner_entry_id FROM next_entries)
+            """,
+            (listed_at, listed_at),
+        )
 
     def save_partial_partner_entries(self, result: ExtractionResult) -> str:
         if result.scope_verified or not result.extraction_complete or not result.records:

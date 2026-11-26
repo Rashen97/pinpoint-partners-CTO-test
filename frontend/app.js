@@ -256,6 +256,7 @@ function changeRows(changes) {
   const labels = new Map([
     ["newly_listed", "Newly listed"],
     ["no_longer_listed", "No longer listed"],
+    ["relisted", "Listed again"],
   ]);
   return changes
     .filter((change) => labels.has(change.kind))
@@ -276,7 +277,41 @@ function changeRows(changes) {
     });
 }
 
-function renderChanges(changes) {
+function renderMoves(moves = []) {
+  const rows = moves.map((move) => {
+    const row = element("li");
+    const observed = new Date(move.observed_at).toLocaleDateString("en-GB", {
+      dateStyle: "medium", timeZone: "UTC",
+    });
+    const status = move.status === "confirmed" ? "Confirmed move" : "Possible move";
+    row.append(
+      element("strong", move.name),
+      element("span", `${move.from_firm} → ${move.to_firm} · ${status}`),
+      element("span", `Observed ${observed}`),
+    );
+    if (move.effective_on) {
+      const effective = new Date(move.effective_on).toLocaleDateString("en-GB", {
+        dateStyle: "medium", timeZone: "UTC",
+      });
+      row.append(element("span", `Effective ${effective}`));
+    }
+    for (const [url, label] of [
+      [move.evidence_url, "View confirmation source"],
+      [move.from_source_url, "View previous firm source"],
+      [move.to_source_url, "View destination firm profile"],
+    ]) {
+      const link = sourceLink(url, label);
+      if (link) row.append(link);
+    }
+    return row;
+  });
+  byId("partner-moves-list").replaceChildren(...rows);
+  byId("partner-moves").hidden = api.demo;
+  byId("partner-moves-empty").hidden = rows.length > 0;
+}
+
+function renderChanges(changes, moves) {
+  renderMoves(moves);
   const liveRows = changeRows(Array.isArray(changes) ? changes : []);
   byId("changes-list").replaceChildren(...liveRows);
   byId("sample-changes-list").replaceChildren(...changeRows(sampleChanges));
@@ -289,9 +324,9 @@ function renderChanges(changes) {
 
 async function start() {
   try {
-    const { records, changes, coverage } = await api.list();
+    const { records, changes, coverage, moves } = await api.list();
     state.records = records;
-    renderChanges(changes);
+    renderChanges(changes, moves);
     setOptions(filters.firm, state.records.map((record) => record.firm_name));
     setOptions(filters.office, state.records.flatMap((record) => record.offices));
     setOptions(filters.practice, state.records.flatMap((record) => record.practices));
