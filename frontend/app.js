@@ -1,4 +1,4 @@
-import { createDirectoryApi } from "./api.js";
+import { createDirectoryApi } from "./api.js?v=2";
 
 const byId = (id) => document.getElementById(id);
 const api = createDirectoryApi(document.querySelector('meta[name="api-base"]').content);
@@ -206,11 +206,59 @@ function profileCallBrief(record, request) {
       result.classList.add("brief-result-ready");
       status.textContent = "Call brief ready.";
       button.textContent = "Call brief generated";
-    } catch {
+    } catch (error) {
       if (request !== profileRequest || !dialog.open) return;
       result.replaceChildren();
-      status.textContent = "Could not generate the call brief. You can retry or use the research links.";
+      status.textContent = typeof error?.cause === "string"
+        ? error.cause
+        : "Could not generate the call brief. You can retry or use the research links.";
       button.textContent = "Retry call brief";
+      button.disabled = false;
+    } finally {
+      button.removeAttribute("aria-busy");
+    }
+  });
+  return section;
+}
+
+function profileRecentWork(record, request) {
+  const section = element("section", "", "profile-brief");
+  const button = element("button", "Research recent work", "research-submit brief-button");
+  button.type = "button";
+  const status = element("p", "", "brief-status");
+  status.setAttribute("role", "status");
+  const result = element("div", "", "brief-result");
+  section.append(button, status, result);
+  button.addEventListener("click", async () => {
+    button.disabled = true;
+    button.setAttribute("aria-busy", "true");
+    status.textContent = "Searching the firm’s website…";
+    try {
+      const research = await api.research(record.partner_entry_id);
+      if (request !== profileRequest || !dialog.open) return;
+      for (const finding of research.findings) {
+        const date = new Date(finding.published_on).toLocaleDateString("en-GB", {
+          dateStyle: "medium", timeZone: "UTC",
+        });
+        result.append(element("h4", finding.headline), element("p", `${date} · ${finding.summary}`));
+        const link = sourceLink(finding.source_url, "Read the firm announcement");
+        if (link) result.append(link);
+      }
+      if (research.conversation_starter) {
+        result.append(element("h4", "Conversation starter"), element("p", research.conversation_starter));
+      }
+      if (research.findings.length) result.classList.add("brief-result-ready");
+      status.textContent = research.findings.length
+        ? "Research ready."
+        : "No recent firm sources naming this partner were found.";
+      button.textContent = "Research complete";
+    } catch (error) {
+      if (request !== profileRequest || !dialog.open) return;
+      result.replaceChildren();
+      status.textContent = typeof error?.cause === "string"
+        ? error.cause
+        : "Could not research recent work. You can retry or use the research links.";
+      button.textContent = "Retry research";
       button.disabled = false;
     } finally {
       button.removeAttribute("aria-busy");
@@ -237,7 +285,7 @@ async function openProfile(record) {
   content.replaceChildren(title, element("p", record.role), overview);
   const link = sourceLink(record.profile_url);
   if (link) content.append(link);
-  if (!api.demo) content.append(profileCallBrief(record, request));
+  if (!api.demo) content.append(profileCallBrief(record, request), profileRecentWork(record, request));
   content.append(profileResearch(record), status);
   dialog.showModal();
   if (api.demo) return;

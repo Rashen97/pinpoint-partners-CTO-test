@@ -30,6 +30,12 @@ export function createDirectoryApi(baseUrl) {
       headers: { Accept: "application/json" },
     });
     if (allowMissing && response.status === 404) return null;
+    if (response.status === 503 && method === "POST") {
+      const payload = await response.json().catch(() => null);
+      if (typeof payload?.detail === "string") {
+        throw new Error("Request unavailable", { cause: payload.detail });
+      }
+    }
     if (!response.ok) throw new Error(`Request failed (${response.status})`);
     return response.json();
   }
@@ -53,6 +59,10 @@ export function createDirectoryApi(baseUrl) {
     async callBrief(id) {
       if (!base) return null;
       return request(`/partners/${encodeURIComponent(id)}/call-brief`, { method: "POST" });
+    },
+    async research(id) {
+      if (!base) return null;
+      return request(`/partners/${encodeURIComponent(id)}/research`, { method: "POST" });
     },
   };
 }
