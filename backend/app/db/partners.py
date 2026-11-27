@@ -81,3 +81,16 @@ def find_profile(connection: sqlite3.Connection, partner_entry_id: str) -> Partn
     for field in ("phone_numbers", "education", "admissions", "languages"):
         values[field] = json.loads(values[field])
     return PartnerProfile.model_validate(values)
+
+
+def find_call_brief_source(connection: sqlite3.Connection, partner_entry_id: str) -> sqlite3.Row | None:
+    return connection.execute(
+        """
+        SELECT e.name, e.firm_name, COALESCE(NULLIF(p.role, ''), e.role) AS role,
+               e.profile_url, p.biography, p.source_checked_at
+        FROM partner_profiles_all AS p
+        JOIN partner_entries_all AS e ON e.partner_entry_id = p.partner_entry_id
+        WHERE p.partner_entry_id = ? AND e.no_longer_listed_at IS NULL
+        """,
+        (partner_entry_id,),
+    ).fetchone()
